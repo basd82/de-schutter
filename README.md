@@ -25,7 +25,7 @@ Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige
 4. Voer in de projectterminal `flutter pub get` uit.
 5. Open `lib/main.dart`, kies een apparaat bij de Flutter-runconfiguratie en druk op Run.
 
-Native projectbestanden staan al in `android/`, `ios/`, `macos/` en `windows/`. De Android Gradle-wrapper en de pluginregistratie worden door Flutter bij de eerste build gegenereerd. Wijzig lokale SDK-paden of gegenereerde bestanden niet in Git. Commit `pubspec.lock` nadat de eerste succesvolle `flutter pub get` de exacte afhankelijkheden heeft vastgelegd.
+Native projectbestanden staan al in `android/`, `ios/`, `macos/` en `windows/`. De Android Gradle-wrapper en de pluginregistratie worden door Flutter bij de eerste build gegenereerd. Wijzig lokale SDK-paden of gegenereerde bestanden niet in Git. `pubspec.lock` bevat de exacte afhankelijkheden die GitHub Actions heeft opgehaald.
 
 ```sh
 flutter doctor
@@ -62,18 +62,19 @@ dart tool/offline_check.dart
 
 De zelfstandige laatste controle gebruikt alleen Dart en controleert scores, handmatige correcties, serialisatie, opslag en back-upherstel. GitHub Actions is ingericht voor analyse/tests en native debugbuilds voor alle vier platforms. De iOS-build is voor de simulator. Dit levert nog geen getekende App Store, Play Store of desktoprelease op.
 
-## Repository aanmaken
+## GitHub
 
-Als de repository nog niet via GitHub is aangemaakt, kun je op je eigen computer met [GitHub CLI](https://cli.github.com/) en account `basd82` uitvoeren:
+De publieke repository staat op [github.com/basd82/de-schutter](https://github.com/basd82/de-schutter). Clone deze repository en open de projectmap in IntelliJ IDEA:
 
 ```sh
-gh auth login
-bash tool/publish_github.sh
+git clone https://github.com/basd82/de-schutter.git
+cd de-schutter
+flutter pub get
 ```
 
-Dit maakt **publiek** `basd82/de-schutter` aan en pusht het project. Het script stopt als die repository of een origin-remote al bestaat, zodat niets wordt overschreven. Bij gebruik van de Windows-terminal kan dit in Git Bash. Dit script is niet uitgevoerd in de omgeving waarin deze projectbasis gemaakt is.
+`tool/publish_github.sh` is alleen bedoeld voor een nieuwe repository. Het stopt als `basd82/de-schutter` of een origin-remote al bestaat.
 
-Bij het maken van deze projectbasis zijn **14 zelfstandige controles geslaagd** en zijn de Dart-bestanden geformatteerd. Flutter zelf kon in de bouwomgeving niet starten door een veiligheidsblokkade op een cloud-metadata-aanroep. De native bestanden zijn daarom vanuit de officiële sjablonen van Flutter 3.47.6 opgebouwd. **Volledige Flutter-analyse, widgettests en native builds moeten nog slagen op CI of op jouw ontwikkelmachine.**
+Bij het maken van deze projectbasis zijn **14 zelfstandige controles geslaagd** en zijn de Dart-bestanden geformatteerd. Flutter zelf kon in de bouwomgeving niet starten door een veiligheidsblokkade op een cloud-metadata-aanroep. De native bestanden zijn daarom vanuit de officiële sjablonen van Flutter 3.47.6 opgebouwd. Flutter-analyse is inmiddels geslaagd op GitHub Actions. De workflow controleert ook widgettests en native builds; bekijk de actuele status onder **Actions**.
 
 ## Structuur
 
