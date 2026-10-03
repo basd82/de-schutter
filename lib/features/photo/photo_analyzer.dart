@@ -49,7 +49,8 @@ class PendingPhotoAnalyzer implements PhotoAnalyzer {
   }) async => const PhotoAnalysis(
     proposals: [],
     available: false,
-    message: 'Automatische herkenning is nog in ontwikkeling. Vul de scores handmatig in; de foto blijft lokaal bewaard.',
+    message:
+        'Automatische herkenning is nog in ontwikkeling. Vul de scores handmatig in; de foto blijft lokaal bewaard.',
   );
 }
 

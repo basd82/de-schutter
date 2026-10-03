@@ -43,8 +43,9 @@ class PhotoService {
       fileName: '$id.$safeExtension',
       createdAt: now,
     );
-    await File('${directory.path}/$id.json')
-        .writeAsString(jsonEncode(capture.toJson()), flush: true);
+    await File(
+      '${directory.path}/$id.json',
+    ).writeAsString(jsonEncode(capture.toJson()), flush: true);
     return SavedPhoto(file, capture);
   }
 
