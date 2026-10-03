@@ -25,7 +25,7 @@ Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige
 4. Voer in de projectterminal `flutter pub get` uit.
 5. Open `lib/main.dart`, kies een apparaat bij de Flutter-runconfiguratie en druk op Run.
 
-Native projectbestanden staan al in `android/`, `ios/`, `macos/` en `windows/`. De Android Gradle-wrapper en de pluginregistratie worden door Flutter bij de eerste build gegenereerd. Wijzig lokale SDK-paden of gegenereerde bestanden niet in Git. `pubspec.lock` bevat de exacte afhankelijkheden die GitHub Actions heeft opgehaald.
+Native projectbestanden staan al in `android/`, `ios/`, `macos/` en `windows/`. De Android Gradle-wrapper en de pluginregistratie worden door Flutter bij de eerste build gegenereerd. Op iOS en macOS voegt Flutter de Swift Package Manager-koppeling automatisch toe; alle huidige plug-ins ondersteunen die koppeling. Wijzig lokale SDK-paden of gegenereerde bestanden niet in Git. `pubspec.lock` bevat de exacte afhankelijkheden die GitHub Actions heeft opgehaald.
 
 ```sh
 flutter doctor
