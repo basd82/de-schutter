@@ -54,8 +54,9 @@ class PhotoService {
     int endIndex,
     ImageSource source,
   ) async {
-    if (!supported)
-      throw UnsupportedError('Fotoverwerking is alleen beschikbaar op mobiel.');
+    if (!supported && source == ImageSource.camera) {
+      throw UnsupportedError('Foto maken is alleen beschikbaar op mobiel.');
+    }
     await root.create(recursive: true);
     await _pending.writeAsString(
       jsonEncode({'cardId': card.id, 'endIndex': endIndex}),
@@ -68,17 +69,23 @@ class PhotoService {
     final saved = selected == null
         ? null
         : await _persist(selected, card.id, endIndex);
-    if (await _pending.exists()) await _pending.delete();
+    if (await _pending.exists()) {
+      await _pending.delete();
+    }
     return saved;
   }
 
   /// Android can restart the activity while the system camera is open.
   Future<SavedPhoto?> recover() async {
-    if (!Platform.isAndroid || !await _pending.exists()) return null;
+    if (!Platform.isAndroid || !await _pending.exists()) {
+      return null;
+    }
     final context =
         jsonDecode(await _pending.readAsString()) as Map<String, dynamic>;
     final lost = await _picker.retrieveLostData();
-    if (lost.exception != null) throw lost.exception!;
+    if (lost.exception != null) {
+      throw lost.exception!;
+    }
     final files = lost.files;
     final saved = files == null || files.isEmpty
         ? null
@@ -92,20 +99,28 @@ class PhotoService {
   }
 
   Future<List<SavedPhoto>> list(String cardId, int endIndex) async {
-    if (!supported) return [];
     final directory = Directory('${root.path}/photos');
-    if (!await directory.exists()) return [];
+    if (!await directory.exists()) {
+      return [];
+    }
     final result = <SavedPhoto>[];
     await for (final file in directory.list()) {
-      if (file is! File || !file.path.endsWith('.json')) continue;
+      if (file is! File || !file.path.endsWith('.json')) {
+        continue;
+      }
       final json =
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      if (json['cardId'] != cardId || json['endIndex'] != endIndex) continue;
+      if (json['cardId'] != cardId || json['endIndex'] != endIndex) {
+        continue;
+      }
       final name = json['fileName'] as String;
-      if (name.contains('/') || name.contains('\\'))
+      if (name.contains('/') || name.contains('\\')) {
         throw const FormatException('Ongeldig fotopad.');
+      }
       final image = File('${directory.path}/$name');
-      if (!await image.exists()) continue;
+      if (!await image.exists()) {
+        continue;
+      }
       result.add(
         SavedPhoto(
           image,

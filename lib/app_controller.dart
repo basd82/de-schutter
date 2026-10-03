@@ -15,7 +15,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _commit(List<Scorecard> next) async {
-    if (busy) throw StateError('Er wordt nog opgeslagen.');
+    if (busy) {
+      throw StateError('Er wordt nog opgeslagen.');
+    }
     busy = true;
     notifyListeners();
     try {
@@ -28,8 +30,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> add(Scorecard card) {
-    if (_cards.any((c) => c.id == card.id))
+    if (_cards.any((c) => c.id == card.id)) {
       throw const FormatException('Deze kaart bestaat al.');
+    }
     return _commit([card, ..._cards]);
   }
 

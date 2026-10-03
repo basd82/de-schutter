@@ -19,8 +19,9 @@ class Score {
     'M',
   ];
   factory Score.parse(String value) {
-    if (!labels.contains(value))
+    if (!labels.contains(value)) {
       throw FormatException('Ongeldige score: $value');
+    }
     return Score._(value);
   }
   int get points => label == 'X'
@@ -93,7 +94,9 @@ class ArrowScore {
     ScoreSource source = ScoreSource.manual,
     DateTime? at,
   }) {
-    if (score?.label == finalScore?.label) return this;
+    if (score?.label == finalScore?.label) {
+      return this;
+    }
     return ArrowScore(
       proposed: proposed,
       finalScore: score,
@@ -111,8 +114,12 @@ class ArrowScore {
   }
 
   ArrowScore confirmProposal() {
-    if (proposed == null) throw StateError('Er is geen scorevoorstel.');
-    if (finalScore != null || history.isNotEmpty) return this;
+    if (proposed == null) {
+      throw StateError('Er is geen scorevoorstel.');
+    }
+    if (finalScore != null || history.isNotEmpty) {
+      return this;
+    }
     return setFinal(proposed, source: ScoreSource.photoConfirmed);
   }
 
@@ -234,8 +241,9 @@ class Scorecard {
   };
   String exportJson() => const JsonEncoder.withIndent('  ').convert(toJson());
   factory Scorecard.fromJson(Map<String, dynamic> j) {
-    if (j['schemaVersion'] != 1)
+    if (j['schemaVersion'] != 1) {
       throw const FormatException('Onbekende bestandsversie.');
+    }
     return Scorecard(
       id: j['id'] as String,
       shooter: j['shooter'] as String,

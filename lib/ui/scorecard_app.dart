@@ -62,7 +62,9 @@ class _ScorecardHomeState extends State<ScorecardHome> {
   bool get busy => capturing || controller.busy;
   Scorecard? get selected {
     for (final card in controller.cards) {
-      if (card.id == selectedId) return card;
+      if (card.id == selectedId) {
+        return card;
+      }
     }
     return controller.cards.isEmpty ? null : controller.cards.first;
   }
@@ -71,12 +73,17 @@ class _ScorecardHomeState extends State<ScorecardHome> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (controller.store.recoveredBackup)
+      if (!mounted) {
+        return;
+      }
+      if (controller.store.recoveredBackup) {
         message(
           'De vorige opgeslagen versie is hersteld. Controleer je laatste serie.',
         );
-      if (widget.recoveryError != null) message(widget.recoveryError!);
+      }
+      if (widget.recoveryError != null) {
+        message(widget.recoveryError!);
+      }
       final photo = widget.recovered;
       if (photo != null &&
           controller.cards.any((c) => c.id == photo.capture.cardId)) {
@@ -93,10 +100,11 @@ class _ScorecardHomeState extends State<ScorecardHome> {
       await action();
       return true;
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         message(
           'Opslaan is niet gelukt. Je vorige scores zijn behouden. Probeer opnieuw.',
         );
+      }
       return false;
     }
   }
@@ -106,8 +114,9 @@ class _ScorecardHomeState extends State<ScorecardHome> {
       context: context,
       builder: (_) => const NewCardDialog(),
     );
-    if (card != null && await perform(() => controller.add(card)) && mounted)
+    if (card != null && await perform(() => controller.add(card)) && mounted) {
       setState(() => selectedId = card.id);
+    }
   }
 
   Future<void> importCard() async {
@@ -140,19 +149,25 @@ class _ScorecardHomeState extends State<ScorecardHome> {
       ),
     );
     input.dispose();
-    if (text == null || !mounted) return;
+    if (text == null || !mounted) {
+      return;
+    }
     try {
-      if (text.length > 2000000)
+      if (text.length > 2000000) {
         throw const FormatException('Bestand te groot.');
+      }
       final card = Scorecard.fromJson(jsonDecode(text) as Map<String, dynamic>);
       if (controller.cards.any((c) => c.id == card.id)) {
         message('Deze kaart bestaat al. Er wordt niets overschreven.');
         return;
       }
-      if (await perform(() => controller.add(card)) && mounted)
+      if (await perform(() => controller.add(card)) && mounted) {
         setState(() => selectedId = card.id);
+      }
     } catch (_) {
-      if (mounted) message('Dit is geen geldige scorekaart van De Schutter.');
+      if (mounted) {
+        message('Dit is geen geldige scorekaart van De Schutter.');
+      }
     }
   }
 
@@ -242,7 +257,7 @@ class _ScorecardHomeState extends State<ScorecardHome> {
         ],
       ),
     );
-    if (choice != null)
+    if (choice != null) {
       await perform(
         () => controller.setScore(
           card.id,
@@ -251,6 +266,7 @@ class _ScorecardHomeState extends State<ScorecardHome> {
           choice == 'clear' ? null : Score.parse(choice),
         ),
       );
+    }
   }
 
   Future<void> history(Scorecard card) => showDialog<void>(
@@ -292,52 +308,70 @@ class _ScorecardHomeState extends State<ScorecardHome> {
     },
   );
   Future<void> capture(Scorecard card, int end) async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Foto maken'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
+    final source = PhotoService.supported
+        ? await showModalBottomSheet<ImageSource>(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt),
+                    title: const Text('Foto maken'),
+                    onTap: () => Navigator.pop(context, ImageSource.camera),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library),
+                    title: const Text('Foto uit galerij'),
+                    onTap: () => Navigator.pop(context, ImageSource.gallery),
+                  ),
+                ],
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Foto uit galerij'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null || !mounted) return;
+          )
+        : ImageSource.gallery;
+    if (source == null || !mounted) {
+      return;
+    }
     setState(() => capturing = true);
     SavedPhoto? photo;
     try {
       photo = await widget.photos.capture(card, end, source);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         message(
-          'Foto niet opgeslagen. Controleer de cameratoestemming en vrije opslagruimte.',
+          'Foto niet opgeslagen. Controleer toegang tot de foto en vrije opslagruimte.',
         );
+      }
     } finally {
-      if (mounted) setState(() => capturing = false);
+      if (mounted) {
+        setState(() => capturing = false);
+      }
     }
-    if (photo != null && mounted) await showPhoto(photo);
+    if (photo != null && mounted) {
+      await showPhoto(photo);
+    }
   }
 
   Future<void> showPhoto(SavedPhoto photo) async {
     final card = controller.cards.firstWhere(
       (c) => c.id == photo.capture.cardId,
     );
-    final analysis = await PendingPhotoAnalyzer().analyze(
-      photo.file,
-      target: card.target,
-      expectedArrows: card.arrowsPerEnd,
-    );
-    if (!mounted) return;
+    final analysis = PhotoService.supported
+        ? await PendingPhotoAnalyzer().analyze(
+            photo.file,
+            target: card.target,
+            expectedArrows: card.arrowsPerEnd,
+          )
+        : const PhotoAnalysis(
+            proposals: [],
+            available: false,
+            message:
+                'Bewaarde blazoenfoto. Je kunt inzoomen en de scores op de kaart handmatig aanpassen.',
+          );
+    if (!mounted) {
+      return;
+    }
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -378,7 +412,9 @@ class _ScorecardHomeState extends State<ScorecardHome> {
   Future<void> viewPhotos(Scorecard card, int end) async {
     try {
       final photos = await widget.photos.list(card.id, end);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       if (photos.isEmpty) {
         message('Deze serie heeft nog geen foto.');
         return;
@@ -399,9 +435,13 @@ class _ScorecardHomeState extends State<ScorecardHome> {
           ),
         ),
       );
-      if (choice != null && mounted) await showPhoto(choice);
+      if (choice != null && mounted) {
+        await showPhoto(choice);
+      }
     } catch (_) {
-      if (mounted) message('De foto kon niet worden geopend.');
+      if (mounted) {
+        message('De foto kon niet worden geopend.');
+      }
     }
   }
 
@@ -531,8 +571,7 @@ class _ScorecardHomeState extends State<ScorecardHome> {
                                 DataColumn(label: Text('Pijl ${a + 1}')),
                               const DataColumn(label: Text('Som')),
                               const DataColumn(label: Text('Totaal')),
-                              if (PhotoService.supported)
-                                const DataColumn(label: Text('Foto')),
+                              const DataColumn(label: Text('Foto')),
                             ],
                             rows: [
                               for (var e = 0; e < card.ends.length; e++)
@@ -562,32 +601,34 @@ class _ScorecardHomeState extends State<ScorecardHome> {
                                       ),
                                     DataCell(Text('${card.endTotal(e)}')),
                                     DataCell(Text('${card.cumulative(e)}')),
-                                    if (PhotoService.supported)
-                                      DataCell(
-                                        Row(
-                                          children: [
-                                            IconButton(
-                                              tooltip:
-                                                  'Foto voor serie ${e + 1}',
-                                              onPressed: busy
-                                                  ? null
-                                                  : () => capture(card, e),
-                                              icon: const Icon(
-                                                Icons.add_a_photo_outlined,
-                                              ),
+                                    DataCell(
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            tooltip: PhotoService.supported
+                                                ? 'Foto voor serie ${e + 1}'
+                                                : 'Bestaande foto openen',
+                                            onPressed: busy
+                                                ? null
+                                                : () => capture(card, e),
+                                            icon: Icon(
+                                              PhotoService.supported
+                                                  ? Icons.add_a_photo_outlined
+                                                  : Icons.folder_open_outlined,
                                             ),
-                                            IconButton(
-                                              tooltip: 'Opgeslagen foto’s',
-                                              onPressed: busy
-                                                  ? null
-                                                  : () => viewPhotos(card, e),
-                                              icon: const Icon(
-                                                Icons.photo_outlined,
-                                              ),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Opgeslagen foto’s',
+                                            onPressed: busy
+                                                ? null
+                                                : () => viewPhotos(card, e),
+                                            icon: const Icon(
+                                              Icons.photo_outlined,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
+                                    ),
                                   ],
                                 ),
                             ],
@@ -748,7 +789,7 @@ class _NewCardDialogState extends State<NewCardDialog> {
       ),
       FilledButton(
         onPressed: () {
-          if (form.currentState!.validate())
+          if (form.currentState!.validate()) {
             Navigator.pop(
               context,
               Scorecard.create(
@@ -761,6 +802,7 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 endCount: ends,
               ),
             );
+          }
         },
         child: const Text('Aanmaken'),
       ),

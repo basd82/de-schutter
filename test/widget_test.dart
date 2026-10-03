@@ -9,26 +9,31 @@ import 'package:de_schutter/features/photo/photo_service.dart';
 import 'package:de_schutter/ui/scorecard_app.dart';
 
 void main() {
-  testWidgets('desktop edits a score, persists it and has no photo action', (
+  testWidgets('desktop edits scores and views photos without camera action', (
     tester,
   ) async {
-    final directory = await Directory.systemTemp.createTemp(
+    final directory = Directory.systemTemp.createTempSync(
       'de-schutter-widget-',
     );
-    addTearDown(() => directory.delete(recursive: true));
+    addTearDown(() => directory.deleteSync(recursive: true));
     final controller = AppController(ScorecardStore(directory));
     final card = Scorecard.create(shooter: 'Bas', endCount: 2);
-    await controller.add(card);
+    await tester.runAsync(() => controller.add(card));
     await tester.pumpWidget(
       ScorecardApp(controller: controller, photos: PhotoService(directory)),
     );
     expect(find.byIcon(Icons.add_a_photo_outlined), findsNothing);
+    expect(find.byIcon(Icons.photo_outlined), findsNWidgets(2));
+    expect(find.byTooltip('Bestaande foto openen'), findsNWidgets(2));
     await tester.tap(find.text('—').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'X'));
-    await tester.pump();
     await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(FilledButton, 'X'));
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
       while (controller.busy) {
+        if (DateTime.now().isAfter(deadline)) {
+          fail('Score opslaan bleef langer dan vijf seconden bezig.');
+        }
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
       expect((await ScorecardStore(directory).load()).single.total, 10);

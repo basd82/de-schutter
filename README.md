@@ -1,8 +1,8 @@
 # De Schutter
 
-Eén Flutter-app voor **iPhone, Android, macOS en Windows**, ontwikkeld met IntelliJ IDEA. Scorekaarten werken offline op ieder platform. Foto-opname en toekomstige blazoenherkenning zijn uitsluitend voor de mobiele apps.
+Eén Flutter-app voor **iPhone, Android, macOS en Windows**, ontwikkeld met IntelliJ IDEA. Scorekaarten werken offline op ieder platform. Foto-opname en toekomstige blazoenherkenning zijn uitsluitend voor de mobiele apps. Bestaande blazoenfoto’s bekijken kan ook op desktop.
 
-Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige scorekaarten, lokale opslag, import/export via JSON en wijzigingshistorie zijn geïmplementeerd. Mobiel kan foto's per serie vastleggen en terugkijken. **Automatische ring- en pijlherkenning is nog niet geïmplementeerd.** De app meldt dit en verzint geen scores of zekerheidspercentages.
+Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige scorekaarten, lokale opslag, import/export via JSON en wijzigingshistorie zijn geïmplementeerd. Mobiel kan foto's per serie vastleggen. Alle platforms kunnen bestaande foto's openen en terugkijken. **Automatische ring- en pijlherkenning is nog niet geïmplementeerd.** De app meldt dit en verzint geen scores of zekerheidspercentages.
 
 ## Platforms
 
@@ -12,7 +12,8 @@ Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige
 | Scores corrigeren met historie | Ja | Ja | Ja | Ja |
 | Offline bewaren | Ja | Ja | Ja | Ja |
 | JSON-kaarten uitwisselen | Ja | Ja | Ja | Ja |
-| Foto vastleggen / galerij / terugkijken | Ja | Ja | — | — |
+| Foto maken / galerij | Ja | Ja | — | — |
+| Bestaande foto openen / terugkijken | Ja | Ja | Ja | Ja |
 | Automatisch scorevoorstel | Gepland | Gepland | — | — |
 | Accounts en server-synchronisatie | Gepland | Gepland | Gepland | Gepland |
 
@@ -43,6 +44,8 @@ Maak een scorekaart met naam, vereniging, boogklasse, afstand, blazoen en 3 of 6
 Elke bevestigde wijziging wordt eerst op schijf bewaard. Pas na een geslaagde opslag verandert de kaart op het scherm. De app bewaart de vorige opgeslagen verzameling als back-up en meldt het als die hersteld moest worden. Als beide bestanden onleesbaar zijn, stopt de app met een melding in plaats van je gegevens te overschrijven.
 
 Op mobiel: kies het foto-icoon van een serie om een foto te maken of uit de galerij te kiezen. De originele foto en de koppeling naar kaart/serie worden lokaal bewaard. Zoom om de inslagen te beoordelen en vul daarna de scores zelf in. Met het galerij-icoon kun je opgeslagen foto's opnieuw bekijken. Bij een door Android onderbroken camera-activiteit probeert de app de opname na herstart te herstellen.
+
+Op desktop kun je met het map-icoon een bestaande blazoenfoto kiezen. De foto wordt bij die serie bewaard en kan daarna via het galerij-icoon worden teruggekeken. Camera en analyse ontbreken op desktop. Foto’s van je telefoon worden nog niet automatisch gesynchroniseerd: breng ze zelf over en open ze op desktop.
 
 Met **Exporteren** kopieer je de JSON-scorekaart; sla de tekst op als `.json` of plak die op een ander apparaat in **Importeren**. Historie en oorspronkelijke herkenningsvoorstellen zijn onderdeel van dit formaat; foto's worden niet meegestuurd. Importeren weigert een al aanwezige kaart-id. Er is nog geen automatische synchronisatie of het samenvoegen van wijzigingen op meerdere apparaten.
 

@@ -1,4 +1,5 @@
 // Standalone checks that require only the Dart SDK, without Flutter or packages.
+// ignore_for_file: avoid_relative_lib_imports
 import 'dart:io';
 
 import '../lib/domain/scorecard.dart';

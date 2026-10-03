@@ -14,23 +14,29 @@ class ScorecardStore {
 
   List<Scorecard> _decode(String text) {
     final root = jsonDecode(text) as Map<String, dynamic>;
-    if (root['schemaVersion'] != 1)
+    if (root['schemaVersion'] != 1) {
       throw const FormatException('Onbekende opslagversie.');
+    }
     final cards = (root['cards'] as List)
         .map((j) => Scorecard.fromJson(Map<String, dynamic>.from(j as Map)))
         .toList();
-    if (cards.map((c) => c.id).toSet().length != cards.length)
+    if (cards.map((c) => c.id).toSet().length != cards.length) {
       throw const FormatException('Dubbele kaart-id.');
+    }
     return cards;
   }
 
   Future<List<Scorecard>> load() async {
     recoveredBackup = false;
-    if (!await _primary.exists() && !await _backup.exists()) return [];
+    if (!await _primary.exists() && !await _backup.exists()) {
+      return [];
+    }
     try {
       return _decode(await _primary.readAsString());
     } catch (_) {
-      if (!await _backup.exists()) rethrow;
+      if (!await _backup.exists()) {
+        rethrow;
+      }
       final cards = _decode(await _backup.readAsString());
       recoveredBackup = true;
       return cards;
