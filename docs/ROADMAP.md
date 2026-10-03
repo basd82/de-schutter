@@ -1,6 +1,6 @@
 # Vervolg
 
-1. Laat `flutter pub get`, analyse, tests en alle vier native builds slagen. Commit `pubspec.lock`. Test lokale opslag, cameratoestemming, fotoherstel en het wijzigen van scores op echte apparaten.
+1. Houd `pubspec.lock` en de CI voor analyse, tests en alle vier native builds bij. Test lokale opslag, cameratoestemming, fotoherstel en het wijzigen van scores op echte apparaten.
 2. Voeg wedstrijd/plaats/baan, bewerkbare metadata, meerdere schutters, wedstrijdspecifieke scoreprofielen en een leesmodus toe. Maak een print/PDF-scorekaart op basis van het voorbeeldformulier, met eigen vormgeving.
 3. Bouw een kalibratiescherm met handmatige centrum/ringen/inslagen. Bevestig scoreberekening met expliciete blazoenprofielen en geometrische grensgevallen vóór automatische detectie.
 4. Annoteer de voorbeeldfoto's zonder duplicaten: gekozen doel, ringen, huidige pijlen en zichtbare inslagen. Laat een schutter de echte scores ter plekke beoordelen; raad geen lijnscores vanaf foto's.

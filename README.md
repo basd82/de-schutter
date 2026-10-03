@@ -74,7 +74,7 @@ flutter pub get
 
 `tool/publish_github.sh` is alleen bedoeld voor een nieuwe repository. Het stopt als `basd82/de-schutter` of een origin-remote al bestaat.
 
-Bij het maken van deze projectbasis zijn **14 zelfstandige controles geslaagd** en zijn de Dart-bestanden geformatteerd. Flutter zelf kon in de bouwomgeving niet starten door een veiligheidsblokkade op een cloud-metadata-aanroep. De native bestanden zijn daarom vanuit de officiële sjablonen van Flutter 3.47.6 opgebouwd. Flutter-analyse is inmiddels geslaagd op GitHub Actions. De workflow controleert ook widgettests en native builds; bekijk de actuele status onder **Actions**.
+GitHub Actions controleert de opmaak, Flutter-analyse, **8 tests** en **14 zelfstandige offline controles**. Daarnaast bouwt de workflow alle vier platforms. Bekijk de actuele resultaten en download de debugbuilds via het tabblad **Actions**. Test camera, fototoegang en opslag ook op echte apparaten voordat je een release verspreidt.
 
 ## Structuur
 
