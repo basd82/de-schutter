@@ -1,0 +1,71 @@
+name: App checks and platform builds
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  FLUTTER_VERSION: '3.47.6'
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test tool
+      - run: flutter analyze --fatal-infos
+      - run: flutter test --coverage
+      - run: dart tool/offline_check.dart
+  builds:
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            os: ubuntu-latest
+            command: flutter build apk --debug
+            artifact: build/app/outputs/flutter-apk/app-debug.apk
+          - platform: ios
+            os: macos-latest
+            command: flutter build ios --simulator --debug
+            artifact: build/ios/iphonesimulator/Runner.app
+          - platform: macos
+            os: macos-latest
+            command: flutter build macos --debug
+            artifact: build/macos/Build/Products/Debug/De Schutter.app
+          - platform: windows
+            os: windows-latest
+            command: flutter build windows --debug
+            artifact: build/windows/x64/runner/Debug
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: ${{ matrix.command }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: de-schutter-${{ matrix.platform }}-debug
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 7
