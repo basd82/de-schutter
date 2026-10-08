@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -107,6 +108,37 @@ class _ScorecardHomeState extends State<ScorecardHome> {
         );
       }
       return false;
+    }
+  }
+
+  Future<void> closeApp() async {
+    if (busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('De Schutter afsluiten?'),
+        content: const Text(
+          'Je opgeslagen scorekaarten blijven bewaard op dit apparaat.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuleren'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Afsluiten'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    if (kIsWeb) {
+      message('Sluit dit browsertabblad om De Schutter af te sluiten.');
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      message('Ga naar het beginscherm om De Schutter te verlaten.');
+    } else {
+      await SystemNavigator.pop();
     }
   }
 
@@ -492,6 +524,11 @@ class _ScorecardHomeState extends State<ScorecardHome> {
         appBar: AppBar(
           title: const Text('De Schutter'),
           actions: [
+            IconButton(
+              tooltip: 'Afsluiten',
+              onPressed: busy ? null : closeApp,
+              icon: const Icon(Icons.power_settings_new),
+            ),
             IconButton(
               tooltip: 'Scorekaart importeren',
               onPressed: busy ? null : importCard,
