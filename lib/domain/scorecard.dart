@@ -322,8 +322,8 @@ class Scorecard {
       arrowsPerEnd: j['arrowsPerEnd'] as int,
       targetCm: (j['targetCm'] as num?)?.toDouble() ?? 40,
       shaftMm: (j['shaftMm'] as num?)?.toDouble() ?? 0,
-      smallTen: j['smallTen'] as bool? ?? (j['target'] == 'WA indoor compound (binnenste 10)'),
-      countX: j['countX'] as bool? ?? false,
+      smallTen: j['smallTen'] as bool? ?? (j['bow'] == 'Compound' && (j['distance'] as int) <= 25),
+      countX: j['countX'] as bool? ?? ((j['distance'] as int) > 25),
       ends: (j['ends'] as List)
           .map(
             (e) => (e as List)
