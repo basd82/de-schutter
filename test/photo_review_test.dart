@@ -86,4 +86,62 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('unrecognized arrow can be confirmed as M without image point', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    ReviewedPhoto? reviewed;
+    final analysis = PhotoAnalysis(
+      available: true,
+      message: 'Test',
+      geometry: TargetGeometry([150, 0, 200, 0, 150, 200, 0, 0]),
+      imageWidth: 400,
+      imageHeight: 400,
+      proposals: [
+        for (var i = 0; i < 2; i++)
+          ArrowProposal(x: .5 + i * .05, y: .5, score: Score.parse('10'), confidence: 0),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: Builder(builder: (context) => TextButton(
+        onPressed: () async {
+          reviewed = await showDialog<ReviewedPhoto>(
+            context: context,
+            builder: (_) => PhotoReviewDialog(
+              analysis: analysis,
+              card: Scorecard.create(shooter: 'Test'),
+              end: 0,
+            ),
+          );
+        },
+        child: const Text('Open'),
+      ))),
+    ));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Pijl 3: M'), findsOneWidget);
+    expect(find.text('Misser gecontroleerd (geen inslagpunt nodig)'), findsOneWidget);
+    final checks = find.byType(CheckboxListTile);
+    // Compound-10, X, target confirmation, then the three arrow confirmations.
+    for (var i = 2; i < 6; i++) {
+      await tester.ensureVisible(checks.at(i));
+      await tester.tap(checks.at(i));
+      await tester.pumpAndSettle();
+    }
+    final save = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Bevestigen en opslaan'),
+    );
+    expect(save.onPressed, isNotNull);
+    await tester.tap(find.text('Bevestigen en opslaan'));
+    await tester.pumpAndSettle();
+    expect(reviewed!.scores.map((score) => score.label).toList(), ['10', '10', 'M']);
+    final last = (reviewed!.metadata['hits'] as List).last as Map<String, dynamic>;
+    expect(last['missing'], isTrue);
+    expect(last['x'], isNull);
+    expect(last['y'], isNull);
+    expect(last['reason'], 'confirmed_miss');
+    expect(tester.takeException(), isNull);
+  });
 }
