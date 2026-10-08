@@ -153,6 +153,10 @@ class Scorecard {
     required this.target,
     required this.bow,
     required this.arrowsPerEnd,
+    required this.targetCm,
+    required this.shaftMm,
+    required this.smallTen,
+    required this.countX,
     required List<List<ArrowScore>> ends,
     required this.updatedAt,
   }) : ends = List.unmodifiable(
@@ -163,6 +167,9 @@ class Scorecard {
         distance <= 0 ||
         distance > 1000 ||
         ![3, 6].contains(arrowsPerEnd) ||
+        ![20.0, 40.0, 60.0, 80.0, 122.0].contains(targetCm) ||
+        !shaftMm.isFinite || shaftMm < 0 || shaftMm > 20 ||
+        (smallTen && countX) ||
         ends.isEmpty ||
         ends.length > 60 ||
         ends.any((e) => e.length != arrowsPerEnd)) {
@@ -177,6 +184,10 @@ class Scorecard {
     String bow = 'Recurve',
     int arrowsPerEnd = 3,
     int endCount = 12,
+    double targetCm = 40,
+    double shaftMm = 0,
+    bool smallTen = false,
+    bool countX = false,
   }) {
     final now = DateTime.now().toUtc();
     return Scorecard(
@@ -188,6 +199,10 @@ class Scorecard {
       target: target,
       bow: bow,
       arrowsPerEnd: arrowsPerEnd,
+      targetCm: targetCm,
+      shaftMm: shaftMm,
+      smallTen: smallTen,
+      countX: countX,
       ends: List.generate(
         endCount,
         (_) => List.generate(arrowsPerEnd, (_) => ArrowScore()),
@@ -198,6 +213,8 @@ class Scorecard {
   final String id, shooter, club, target, bow;
   final DateTime date, updatedAt;
   final int distance, arrowsPerEnd;
+  final double targetCm, shaftMm;
+  final bool smallTen, countX;
   final List<List<ArrowScore>> ends;
   Iterable<ArrowScore> get arrows => ends.expand((e) => e);
   int get total => arrows.fold(0, (s, a) => s + (a.finalScore?.points ?? 0));
@@ -221,6 +238,10 @@ class Scorecard {
       target: target,
       bow: bow,
       arrowsPerEnd: arrowsPerEnd,
+      targetCm: targetCm,
+      shaftMm: shaftMm,
+      smallTen: smallTen,
+      countX: countX,
       ends: copy,
       updatedAt: DateTime.now().toUtc(),
     );
@@ -259,6 +280,10 @@ class Scorecard {
       target: target,
       bow: bow,
       arrowsPerEnd: arrowsPerEnd,
+      targetCm: targetCm,
+      shaftMm: shaftMm,
+      smallTen: smallTen,
+      countX: countX,
       ends: copy,
       updatedAt: DateTime.now().toUtc(),
     );
@@ -274,6 +299,10 @@ class Scorecard {
     'target': target,
     'bow': bow,
     'arrowsPerEnd': arrowsPerEnd,
+    'targetCm': targetCm,
+    'shaftMm': shaftMm,
+    'smallTen': smallTen,
+    'countX': countX,
     'ends': ends.map((e) => e.map((a) => a.toJson()).toList()).toList(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -291,6 +320,10 @@ class Scorecard {
       target: j['target'] as String,
       bow: j['bow'] as String,
       arrowsPerEnd: j['arrowsPerEnd'] as int,
+      targetCm: (j['targetCm'] as num?)?.toDouble() ?? 40,
+      shaftMm: (j['shaftMm'] as num?)?.toDouble() ?? 0,
+      smallTen: j['smallTen'] as bool? ?? (j['target'] == 'WA indoor compound (binnenste 10)'),
+      countX: j['countX'] as bool? ?? false,
       ends: (j['ends'] as List)
           .map(
             (e) => (e as List)
