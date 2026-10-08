@@ -6,7 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../app_controller.dart';
 import '../domain/scorecard.dart';
-import '../features/photo/photo_analyzer.dart';
+import '../features/photo/local_photo_analyzer.dart';
+import 'photo_review_dialog.dart';
 import '../features/photo/photo_service.dart';
 
 class ScorecardApp extends StatelessWidget {
@@ -357,56 +358,92 @@ class _ScorecardHomeState extends State<ScorecardHome> {
     final card = controller.cards.firstWhere(
       (c) => c.id == photo.capture.cardId,
     );
-    final analysis = PhotoService.supported
-        ? await PendingPhotoAnalyzer().analyze(
-            photo.file,
-            target: card.target,
-            expectedArrows: card.arrowsPerEnd,
-          )
-        : const PhotoAnalysis(
-            proposals: [],
-            available: false,
-            message:
-                'Bewaarde blazoenfoto. Je kunt inzoomen en de scores op de kaart handmatig aanpassen.',
-          );
-    if (!mounted) {
-      return;
-    }
-    await showDialog<void>(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Foto · serie ${photo.capture.endIndex + 1}'),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: 300,
-                  child: InteractiveViewer(
-                    child: Image.file(
-                      photo.file,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) =>
-                          const Text('Deze foto kan niet worden weergegeven.'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(analysis.message),
-              ],
-            ),
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Expanded(child: Text('Blazoen en pijlen analyseren…')),
+            ],
           ),
         ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Scores handmatig invullen'),
-          ),
-        ],
       ),
     );
+    final analysis = await LocalPhotoAnalyzer().analyze(
+      photo.file,
+      target: card.target,
+      expectedArrows: card.arrowsPerEnd,
+    );
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    if (analysis.preview == null) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Fotoherkenning'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 250,
+                child: Image.file(
+                  photo.file,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      const Text('Foto niet weer te geven.'),
+                ),
+              ),
+              Text(analysis.message),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Scores handmatig invullen'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    Map<String, dynamic>? previous;
+    try {
+      previous = await widget.photos.readReview(photo);
+    } catch (_) {
+      /* A saved image remains usable if its review metadata is damaged. */
+    }
+    if (!mounted) return;
+    final result = await showDialog<ReviewedPhoto>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PhotoReviewDialog(
+        analysis: analysis,
+        card: card,
+        end: photo.capture.endIndex,
+        previous: previous,
+      ),
+    );
+    if (result == null) return;
+    try {
+      await widget.photos.saveReview(photo, result.metadata);
+      await controller.confirmPhotoEnd(
+        card.id,
+        photo.capture.endIndex,
+        result.scores,
+        corrected: result.corrected,
+        proposals: result.proposals,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Opslaan mislukt: $e')));
+      }
+    }
   }
 
   Future<void> viewPhotos(Scorecard card, int end) async {

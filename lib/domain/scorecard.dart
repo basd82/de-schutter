@@ -226,6 +226,44 @@ class Scorecard {
     );
   }
 
+  /// Saves one reviewed photo end atomically and preserves entered scores.
+  Scorecard confirmPhotoEnd(
+    int end,
+    List<Score> scores, {
+    Set<int> corrected = const {},
+    List<Score>? proposals,
+  }) {
+    if (scores.length != arrowsPerEnd ||
+        (proposals != null && proposals.length != scores.length)) {
+      throw const FormatException('Controleer alle pijlen van de serie.');
+    }
+    final copy = ends.map((e) => e.toList()).toList();
+    for (var i = 0; i < scores.length; i++) {
+      final current = copy[end][i];
+      if (current.finalScore != null || current.history.isNotEmpty) continue;
+      copy[end][i] = current
+          .withProposal(proposals?[i] ?? scores[i], 0)
+          .setFinal(
+            scores[i],
+            source: corrected.contains(i)
+                ? ScoreSource.manual
+                : ScoreSource.photoConfirmed,
+          );
+    }
+    return Scorecard(
+      id: id,
+      shooter: shooter,
+      club: club,
+      date: date,
+      distance: distance,
+      target: target,
+      bow: bow,
+      arrowsPerEnd: arrowsPerEnd,
+      ends: copy,
+      updatedAt: DateTime.now().toUtc(),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'schemaVersion': 1,
     'id': id,

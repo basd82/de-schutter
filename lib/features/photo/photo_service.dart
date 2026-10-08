@@ -43,9 +43,8 @@ class PhotoService {
       fileName: '$id.$safeExtension',
       createdAt: now,
     );
-    await File(
-      '${directory.path}/$id.json',
-    ).writeAsString(jsonEncode(capture.toJson()), flush: true);
+    await File('${directory.path}/$id.json')
+        .writeAsString(jsonEncode(capture.toJson()), flush: true);
     return SavedPhoto(file, capture);
   }
 
@@ -96,6 +95,24 @@ class PhotoService {
           );
     await _pending.delete();
     return saved;
+  }
+
+  Future<Map<String, dynamic>?> readReview(SavedPhoto photo) async {
+    final file = File('${root.path}/photos/${photo.capture.id}.json');
+    final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    return json['review'] == null
+        ? null
+        : Map<String, dynamic>.from(json['review'] as Map);
+  }
+
+  Future<void> saveReview(SavedPhoto photo, Map<String, dynamic> review) async {
+    final file = File('${root.path}/photos/${photo.capture.id}.json');
+    final next = File('${file.path}.tmp');
+    await next.writeAsString(
+      jsonEncode({...photo.capture.toJson(), 'review': review}),
+      flush: true,
+    );
+    await next.rename(file.path);
   }
 
   Future<List<SavedPhoto>> list(String cardId, int endIndex) async {

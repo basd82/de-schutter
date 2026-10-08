@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'target_geometry.dart';
 
 import '../../domain/scorecard.dart';
 
@@ -9,15 +12,17 @@ class ArrowProposal {
     required this.score,
     required this.confidence,
     this.needsReview = true,
+    this.lineCase = false,
   });
 
   /// Coordinates in the rectified target plane, normalized to [0, 1].
   final double x, y;
   final Score score;
 
-  /// Only show calibrated confidence from a validated model.
+  /// Zero means uncalibrated; never present it as a probability.
   final double confidence;
   final bool needsReview;
+  final bool lineCase;
 }
 
 class PhotoAnalysis {
@@ -25,10 +30,17 @@ class PhotoAnalysis {
     required this.proposals,
     required this.message,
     required this.available,
+    this.geometry,
+    this.preview,
+    this.imageWidth = 0,
+    this.imageHeight = 0,
   });
   final List<ArrowProposal> proposals;
   final String message;
   final bool available;
+  final TargetGeometry? geometry;
+  final Uint8List? preview;
+  final int imageWidth, imageHeight;
 }
 
 abstract interface class PhotoAnalyzer {
@@ -37,21 +49,6 @@ abstract interface class PhotoAnalyzer {
     required String target,
     required int expectedArrows,
   });
-}
-
-/// Explicit foundation for the future on-device engine. No fabricated results.
-class PendingPhotoAnalyzer implements PhotoAnalyzer {
-  @override
-  Future<PhotoAnalysis> analyze(
-    File photo, {
-    required String target,
-    required int expectedArrows,
-  }) async => const PhotoAnalysis(
-    proposals: [],
-    available: false,
-    message:
-        'Automatische herkenning is nog in ontwikkeling. Vul de scores handmatig in; de foto blijft lokaal bewaard.',
-  );
 }
 
 class PhotoCapture {

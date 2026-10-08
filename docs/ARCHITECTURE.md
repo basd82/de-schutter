@@ -18,9 +18,13 @@ Opslag schrijft naar `scorecards.tmp`, flusht en vervangt de primaire file via r
 
 Foto's hebben een eigen `photos/<id>.<ext>` en `photos/<id>.json` met kaart-id, serie-index en opnametijd. JSON-kaartuitwisseling bevat geen foto's of absolute bestandspaden. Er wordt niets automatisch geüpload. Opslagquota, fotocompressie en verwijderbeleid volgen later.
 
-## Fotoherkenning — volgende ontwikkelfase
+## Fotoherkenning — lokale baseline
 
-`PhotoAnalyzer` heeft een verwisselbare engine. `PendingPhotoAnalyzer` meldt dat herkenning nog niet beschikbaar is. Er is geen dummy-model of willekeurige score.
+`PhotoAnalyzer` wordt geïmplementeerd door `LocalPhotoAnalyzer` met de pure Dart `image`-bibliotheek. EXIF-oriëntatie wordt verwerkt vóór detectie en de preview gebruikt hetzelfde coördinatenstelsel. Eén geel component levert de initiële ellips; geel/rood- en rood/blauw-overgangen begrenzen een projectieve fit. Radiale kleurcontrole wijst ongeschikte beelden af. In het gerectificeerde vlak leveren houtkleur/lokaal contrast en langwerpige componenten kandidaat-inslagen. Het binnenste schachtuiteinde is een heuristiek, geen bewezen inslag; alle voorstellen moeten worden gecontroleerd.
+
+`PhotoReviewDialog` toont ringen en verplaatsbare nummers, biedt vierpuntskalibratie, score-overschrijving en expliciete controle per pijl. De scorekaartcommit behoudt menselijke invoer, ook eerder gewiste scores. Fotometadata bevat geometrie, instellingen, posities en engineversie. Confidence 0 is een interne sentinel voor ongekalibreerd en wordt niet als kans getoond.
+
+Volgende verbeteringen:
 
 1. Kies het juiste blazoen en het expliciete scoreprofiel, inclusief compound indoor en meervoudige blazoenen.
 2. Beoordeel scherpte, zichtbaarheid, belichting en voldoende resolutie.

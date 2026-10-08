@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:de_schutter/domain/scorecard.dart';
@@ -25,9 +26,8 @@ void main() {
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jX1kAAAAASUVORK5CYII=',
           ),
         );
-        await File(
-          '${directory.path}/one.json',
-        ).writeAsString(jsonEncode(capture.toJson()));
+        await File('${directory.path}/one.json')
+            .writeAsString(jsonEncode(capture.toJson()));
         final photos = PhotoService(root);
         expect((await photos.list('card', 1)).single.capture.id, 'one');
         expect(await photos.list('other', 1), isEmpty);

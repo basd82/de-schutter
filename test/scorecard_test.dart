@@ -17,32 +17,29 @@ void main() {
     expect(card.cumulative(0), 19);
     expect(card.cumulative(1), 29);
   });
-  test(
-    'manual correction preserves proposal and cannot be overwritten by analysis',
-    () {
-      final original = ArrowScore().withProposal(Score.parse('9'), .7);
-      expect(original.finalScore, isNull);
-      final confirmed = original.confirmProposal();
-      final corrected = confirmed.setFinal(Score.parse('10'));
-      expect(corrected.proposed!.label, '9');
-      expect(corrected.finalScore!.label, '10');
-      expect(corrected.manualOverride, isTrue);
-      expect(corrected.history.length, 2);
-      expect(
-        corrected.withProposal(Score.parse('8'), .99).finalScore!.label,
-        '10',
-      );
-      expect(corrected.confirmProposal().finalScore!.label, '10');
-      expect(
-        corrected
-            .setFinal(null)
-            .withProposal(Score.parse('8'), .99)
-            .proposed!
-            .label,
-        '9',
-      );
-    },
-  );
+  test('manual correction preserves proposal and cannot be overwritten by analysis', () {
+    final original = ArrowScore().withProposal(Score.parse('9'), .7);
+    expect(original.finalScore, isNull);
+    final confirmed = original.confirmProposal();
+    final corrected = confirmed.setFinal(Score.parse('10'));
+    expect(corrected.proposed!.label, '9');
+    expect(corrected.finalScore!.label, '10');
+    expect(corrected.manualOverride, isTrue);
+    expect(corrected.history.length, 2);
+    expect(
+      corrected.withProposal(Score.parse('8'), .99).finalScore!.label,
+      '10',
+    );
+    expect(corrected.confirmProposal().finalScore!.label, '10');
+    expect(
+      corrected
+          .setFinal(null)
+          .withProposal(Score.parse('8'), .99)
+          .proposed!
+          .label,
+      '9',
+    );
+  });
   test('serialization preserves edits and original card is immutable', () {
     final empty = Scorecard.create(shooter: 'Bas');
     final scored = empty
