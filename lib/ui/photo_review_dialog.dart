@@ -178,15 +178,17 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                               ? null
                               : (details) => setState(() {
                                   if (hits.length >= widget.card.arrowsPerEnd) {
-                                    error = 'Verwijder eerst een fout gevonden pijl.';
+                                    error =
+                                        'Verwijder eerst een fout gevonden pijl.';
                                     return;
                                   }
                                   final p = geometry.targetPoint(
                                     details.localPosition.dx / scale,
                                     details.localPosition.dy / scale,
                                   );
-                                  if (p.x.abs() > 1.2 || p.y.abs() > 1.2)
+                                  if (p.x.abs() > 1.2 || p.y.abs() > 1.2) {
                                     return;
+                                  }
                                   hits.add(
                                     _Hit(_offset(p), scoring.score(p.x, p.y)),
                                   );
@@ -376,13 +378,42 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                                       .ends[widget.end][i]
                                       .history
                                       .isNotEmpty))
-                            const Text('Bestaande invoer blijft behouden'),
-                          IconButton(
-                            tooltip: 'Pijl verwijderen',
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () => setState(() {
-                              hits.removeAt(i);
-                              selected = 0;
+                            Flexible(
+                              child: Text(
+                                'Kaart: '
+                                '${widget.card.ends[widget.end][i].finalScore?.label ?? "leeg"} '
+                                '(behouden)',
+                              ),
+                            ),
+                          PopupMenuButton<String>(
+                            tooltip: 'Pijl verplaatsen of verwijderen',
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: 'up',
+                                enabled: i > 0,
+                                child: const Text('Naar vorige plek'),
+                              ),
+                              PopupMenuItem(
+                                value: 'down',
+                                enabled: i < hits.length - 1,
+                                child: const Text('Naar volgende plek'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'remove',
+                                child: Text('Pijl verwijderen'),
+                              ),
+                            ],
+                            onSelected: (action) => setState(() {
+                              if (action == 'remove') {
+                                hits.removeAt(i);
+                                selected = 0;
+                              } else {
+                                final to = action == 'up' ? i - 1 : i + 1;
+                                final swap = hits[to];
+                                hits[to] = hits[i];
+                                hits[i] = swap;
+                                selected = to;
+                              }
                               for (final h in hits) {
                                 h.checked = false;
                               }

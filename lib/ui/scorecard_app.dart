@@ -440,8 +440,9 @@ class _ScorecardHomeState extends State<ScorecardHome> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Opslaan mislukt: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Opslaan mislukt: $e')));
       }
     }
   }

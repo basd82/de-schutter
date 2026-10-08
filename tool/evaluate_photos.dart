@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:image/image.dart' as img;
 
-import '../lib/features/photo/local_photo_analyzer.dart';
+import 'package:de_schutter/features/photo/local_photo_analyzer.dart';
 
 /// Private fixture evaluation; source photographs are never uploaded by this tool.
 Future<void> main(List<String> args) async {
@@ -18,6 +18,7 @@ Future<void> main(List<String> args) async {
       await file.readAsBytes(),
       target: 'WA 10-ringen',
       expectedArrows: 3,
+      trace: (v) => stdout.writeln(v),
     );
     stdout.writeln(
       '${file.uri.pathSegments.last}: target=${result.geometry != null} '
@@ -47,7 +48,8 @@ Future<void> main(List<String> args) async {
         );
       }
     }
-    await File('${output.path}/${index++}.jpg')
-        .writeAsBytes(img.encodeJpg(image));
+    await File(
+      '${output.path}/${index++}.jpg',
+    ).writeAsBytes(img.encodeJpg(image));
   }
 }

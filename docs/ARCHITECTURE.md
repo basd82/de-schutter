@@ -3,7 +3,7 @@
 ## Harde uitgangspunten
 
 - Android/iPhone verwerken foto's op het toestel. De app heeft nu geen server of AI-API nodig.
-- macOS/Windows bieden scorekaarten en het openen/terugkijken van bestaande foto’s. De interface en `PhotoService` blokkeren camera-opname op desktop; desktop roept ook de analyse-engine niet aan.
+- macOS/Windows bieden scorekaarten en het openen/terugkijken van bestaande foto’s. De interface en `PhotoService` blokkeren camera-opname op desktop; desktop gebruikt dezelfde lokale analyse-engine.
 - Herkenning levert voorstellen. Alleen bevestigde scores tellen mee.
 - Handmatig ingevulde, gecorrigeerde of leeggemaakte scores worden nooit overschreven door een nieuw herkenningsresultaat.
 - De oorspronkelijke voorgestelde score, definitieve score en wijzigingshistorie blijven gescheiden.
@@ -45,6 +45,6 @@ Geen backend in versie 0.1.0. Ontwerp voordat accounts worden toegevoegd een API
 
 ## Platformlevering
 
-Een gedeelde Flutter/Dart-UI en domeinlaag, aparte native launchers. Android gebruikt Kotlin; iOS/macOS Swift; Windows de Flutter C++ runner. Camera en analyse zijn mobiele services; het fotoarchief en de viewer werken op alle platforms. iOS en macOS builden op macOS, Windows op Windows en Android op een machine met Android SDK.
+Een gedeelde Flutter/Dart-UI en domeinlaag, aparte native launchers. Android gebruikt Kotlin; iOS/macOS Swift; Windows de Flutter C++ runner. Camera-opname is een mobiele service; analyse is gedeeld; het fotoarchief en de viewer werken op alle platforms. iOS en macOS builden op macOS, Windows op Windows en Android op een machine met Android SDK.
 
 CI gebruikt debugbuilds en een iOS simulatorbuild. Distributie vereist later signing, bundle identifiers en winkel-/desktopinstallatiepakketten. De actuele resultaten en debugbuilds staan in GitHub Actions. Camera, fototoegang en opslag moeten vóór distributie ook op echte apparaten worden getest.

@@ -12,9 +12,10 @@ Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige
 | Scores corrigeren met historie | Ja | Ja | Ja | Ja |
 | Offline bewaren | Ja | Ja | Ja | Ja |
 | JSON-kaarten uitwisselen | Ja | Ja | Ja | Ja |
-| Foto maken / galerij | Ja | Ja | — | — |
+| Foto maken | Ja | Ja | — | — |
+| Foto selecteren | Ja | Ja | Ja | Ja |
 | Bestaande foto openen / terugkijken | Ja | Ja | Ja | Ja |
-| Automatisch scorevoorstel | Gepland | Gepland | — | — |
+| Automatisch scorevoorstel (experimenteel) | Ja | Ja | Ja | Ja |
 | Accounts en server-synchronisatie | Gepland | Gepland | Gepland | Gepland |
 
 ## Openen in IntelliJ IDEA
@@ -45,7 +46,7 @@ Elke bevestigde wijziging wordt eerst op schijf bewaard. Pas na een geslaagde op
 
 Op mobiel: kies het foto-icoon van een serie om een foto te maken of uit de galerij te kiezen. De originele foto en de koppeling naar kaart/serie worden lokaal bewaard. Zoom om de inslagen te beoordelen en vul daarna de scores zelf in. Met het galerij-icoon kun je opgeslagen foto's opnieuw bekijken. Bij een door Android onderbroken camera-activiteit probeert de app de opname na herstart te herstellen.
 
-Op desktop kun je met het map-icoon een bestaande blazoenfoto kiezen. De foto wordt bij die serie bewaard en kan daarna via het galerij-icoon worden teruggekeken. Camera en analyse ontbreken op desktop. Foto’s van je telefoon worden nog niet automatisch gesynchroniseerd: breng ze zelf over en open ze op desktop.
+Op desktop kun je met het map-icoon een bestaande blazoenfoto kiezen. De foto wordt bij die serie bewaard en kan daarna via het galerij-icoon worden teruggekeken. Camera-opname ontbreekt op desktop; lokale analyse werkt wel. Foto’s van je telefoon worden nog niet automatisch gesynchroniseerd: breng ze zelf over en open ze op desktop.
 
 Met **Exporteren** kopieer je de JSON-scorekaart; sla de tekst op als `.json` of plak die op een ander apparaat in **Importeren**. Historie en oorspronkelijke herkenningsvoorstellen zijn onderdeel van dit formaat; foto's worden niet meegestuurd. Importeren weigert een al aanwezige kaart-id. Er is nog geen automatische synchronisatie of het samenvoegen van wijzigingen op meerdere apparaten.
 
@@ -74,7 +75,7 @@ flutter pub get
 
 `tool/publish_github.sh` is alleen bedoeld voor een nieuwe repository. Het stopt als `basd82/de-schutter` of een origin-remote al bestaat.
 
-GitHub Actions controleert de opmaak, Flutter-analyse, **8 tests** en **14 zelfstandige offline controles**. Daarnaast bouwt de workflow alle vier platforms. Bekijk de actuele resultaten en download de debugbuilds via het tabblad **Actions**. Test camera, fototoegang en opslag ook op echte apparaten voordat je een release verspreidt.
+GitHub Actions controleert de opmaak, Flutter-analyse, tests en zelfstandige offline controles. Daarnaast bouwt de workflow alle vier platforms. Bekijk de actuele resultaten en download de debugbuilds via het tabblad **Actions**. Test camera, fototoegang en opslag ook op echte apparaten voordat je een release verspreidt.
 
 ## Structuur
 

@@ -26,9 +26,15 @@ void main() {
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jX1kAAAAASUVORK5CYII=',
           ),
         );
-        await File('${directory.path}/one.json')
-            .writeAsString(jsonEncode(capture.toJson()));
+        await File(
+          '${directory.path}/one.json',
+        ).writeAsString(jsonEncode(capture.toJson()));
         final photos = PhotoService(root);
+        final saved = (await photos.list('card', 1)).single;
+        expect(saved.capture.id, 'one');
+        expect(await photos.readReview(saved), isNull);
+        await photos.saveReview(saved, {'hits': [], 'engine': 'test'});
+        expect((await photos.readReview(saved))!['engine'], 'test');
         expect((await photos.list('card', 1)).single.capture.id, 'one');
         expect(await photos.list('other', 1), isEmpty);
         expect(await photos.list('card', 0), isEmpty);

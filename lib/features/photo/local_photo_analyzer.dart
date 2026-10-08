@@ -5,7 +5,6 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
-import '../../domain/scorecard.dart';
 import 'photo_analyzer.dart';
 import 'target_geometry.dart';
 
@@ -37,6 +36,7 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
     Uint8List bytes, {
     required String target,
     required int expectedArrows,
+    void Function(String)? trace,
   }) {
     if (target != 'WA 10-ringen') {
       return const PhotoAnalysis(
@@ -47,7 +47,12 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
             'Gebruik voor dit blazoen handmatige scores.',
       );
     }
-    final decoded = img.decodeImage(bytes);
+    img.Image? decoded;
+    try {
+      decoded = img.decodeImage(bytes);
+    } catch (_) {
+      decoded = null;
+    }
     if (decoded == null) {
       return const PhotoAnalysis(
         proposals: [],
@@ -65,7 +70,7 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
           )
         : oriented;
     final preview = Uint8List.fromList(img.encodeJpg(image, quality: 90));
-    final geometry = _findTarget(image);
+    final geometry = _findTarget(image, trace: trace);
     if (geometry == null) {
       return PhotoAnalysis(
         proposals: [],
@@ -127,7 +132,7 @@ int _color(img.Pixel p) {
   return 0;
 }
 
-TargetGeometry? _findTarget(img.Image image) {
+TargetGeometry? _findTarget(img.Image image, {void Function(String)? trace}) {
   final w = image.width, h = image.height;
   final colors = Uint8List(w * h);
   for (final p in image) {
@@ -142,11 +147,46 @@ TargetGeometry? _findTarget(img.Image image) {
           (v) => v == 1,
         ).where((c) => c.length > 60).toList()
         ..sort((a, b) => b.length.compareTo(a.length));
-  if (components.isEmpty ||
-      (components.length > 1 &&
-          components[1].length > components[0].length * .55))
+  trace?.call(
+    'yellow components: ${components.map((c) => c.length).take(5).toList()}',
+  );
+  final candidates = <TargetGeometry>[];
+  for (final yellow in components.take(50)) {
+    final candidate = _fitTarget(image, colors, yellow, trace);
+    if (candidate != null) candidates.add(candidate);
+  }
+  candidates.sort((a, b) => b.radiusPixels.compareTo(a.radiusPixels));
+  if (candidates.isEmpty) return null;
+  if (candidates.length > 1 &&
+      candidates[1].radiusPixels > candidates[0].radiusPixels * .75) {
     return null;
-  final yellow = components.first;
+  }
+  final g = candidates.first;
+  var topAngle = 0.0, topY = double.infinity;
+  for (var i = 0; i < 360; i++) {
+    final t = i * math.pi / 180;
+    final p = g.imagePoint(math.cos(t), math.sin(t));
+    if (p.y < topY) {
+      topY = p.y;
+      topAngle = t;
+    }
+  }
+  return TargetGeometry.fromAnchors([
+    for (var i = 0; i < 4; i++)
+      g.imagePoint(
+        math.cos(topAngle + i * math.pi / 2),
+        math.sin(topAngle + i * math.pi / 2),
+      ),
+  ]);
+}
+
+TargetGeometry? _fitTarget(
+  img.Image image,
+  Uint8List colors,
+  List<int> yellow,
+  void Function(String)? trace,
+) {
+  final w = image.width, h = image.height;
   var cx = 0.0, cy = 0.0, xx = 0.0, yy = 0.0, xy = 0.0;
   for (final i in yellow) {
     cx += i % w;
@@ -167,7 +207,15 @@ TargetGeometry? _findTarget(img.Image image) {
   final diff = math.sqrt(math.pow(xx - yy, 2) + 4 * xy * xy);
   final a = 10 * math.sqrt((xx + yy + diff) / 2);
   final b = 10 * math.sqrt((xx + yy - diff) / 2);
-  if (!a.isFinite || !b.isFinite || b < 20 || a / b > 3) return null;
+  trace?.call('seed: $cx,$cy axes=$a,$b');
+  if (!a.isFinite ||
+      !b.isFinite ||
+      b < 20 ||
+      a / b > 3 ||
+      a > math.max(w, h) * .8 ||
+      yellow.length / (math.pi * a * b * .04) < .5) {
+    return null;
+  }
   var geometry = TargetGeometry([
     a * math.cos(angle),
     -b * math.sin(angle),
@@ -199,9 +247,11 @@ TargetGeometry? _findTarget(img.Image image) {
       }
     }
   }
+  trace?.call('boundary samples: ${samples.length}');
   if (samples.where((s) => s.$3 == .2).length < 12 ||
-      samples.where((s) => s.$3 == .4).length < 20)
+      samples.where((s) => s.$3 == .4).length < 20) {
     return null;
+  }
   double loss(TargetGeometry g) {
     var sum = 0.0;
     for (final s in samples) {
@@ -237,6 +287,7 @@ TargetGeometry? _findTarget(img.Image image) {
       }
     }
   }
+  trace?.call('fit residual: $best geometry=${geometry.h}');
   if (best > .0008) return null;
   // Verify radial colors around the entire face, not merely a yellow object.
   var good = 0, total = 0;
@@ -251,6 +302,7 @@ TargetGeometry? _findTarget(img.Image image) {
     final outer = geometry.imagePoint(math.cos(t), math.sin(t));
     if (outer.x < 0 || outer.y < 0 || outer.x >= w || outer.y >= h) return null;
   }
+  trace?.call('radial coverage: $good/$total');
   return good / total >= .65 ? geometry : null;
 }
 
@@ -293,8 +345,9 @@ List<math.Point<double>> _findShafts(img.Image image, TargetGeometry g) {
   for (var y = 0; y < size; y++) {
     for (var x = 0; x < size; x++) {
       final p = g.imagePoint((x - size / 2) / radius, (y - size / 2) / radius);
-      if (p.x < 0 || p.y < 0 || p.x >= image.width || p.y >= image.height)
+      if (p.x < 0 || p.y < 0 || p.x >= image.width || p.y >= image.height) {
         continue;
+      }
       final c = image.getPixel(p.x.toInt(), p.y.toInt());
       rectified.setPixelRgb(x, y, c.r, c.g, c.b);
       valid[y * size + x] = 1;
