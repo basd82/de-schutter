@@ -63,8 +63,8 @@ void main() {
       );
       expect(save().onPressed, isNull);
       final checks = find.byType(CheckboxListTile);
-      // Small-ten, X, then target and the three arrows.
-      for (var i = 2; i < 6; i++) {
+      // Target confirmation, then the three arrow confirmations.
+      for (var i = 0; i < 4; i++) {
         await tester.ensureVisible(checks.at(i));
         await tester.tap(checks.at(i));
         await tester.pumpAndSettle();
@@ -75,8 +75,8 @@ void main() {
       await tester.tap(miss);
       await tester.pumpAndSettle();
       expect(save().onPressed, isNull);
-      await tester.ensureVisible(checks.at(3));
-      await tester.tap(checks.at(3));
+      await tester.ensureVisible(checks.at(1));
+      await tester.tap(checks.at(1));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bevestigen en opslaan'));
       await tester.pumpAndSettle();
@@ -124,8 +124,8 @@ void main() {
     expect(find.textContaining('Pijl 3: M'), findsOneWidget);
     expect(find.text('Misser gecontroleerd (geen inslagpunt nodig)'), findsOneWidget);
     final checks = find.byType(CheckboxListTile);
-    // Compound-10, X, target confirmation, then the three arrow confirmations.
-    for (var i = 2; i < 6; i++) {
+    // Target confirmation and three arrow confirmations.
+    for (var i = 0; i < 4; i++) {
       await tester.ensureVisible(checks.at(i));
       await tester.tap(checks.at(i));
       await tester.pumpAndSettle();
