@@ -3,7 +3,7 @@
 ## Harde uitgangspunten
 
 - Android/iPhone verwerken foto's op het toestel. De app heeft nu geen server of AI-API nodig.
-- macOS/Windows bieden scorekaarten en het openen/terugkijken van bestaande foto’s. De interface en `PhotoService` blokkeren camera-opname op desktop; desktop roept ook de analyse-engine niet aan.
+- macOS/Windows bieden scorekaarten en het openen/terugkijken van bestaande foto’s. De interface en `PhotoService` blokkeren camera-opname op desktop; desktop gebruikt dezelfde lokale analyse-engine.
 - Herkenning levert voorstellen. Alleen bevestigde scores tellen mee.
 - Handmatig ingevulde, gecorrigeerde of leeggemaakte scores worden nooit overschreven door een nieuw herkenningsresultaat.
 - De oorspronkelijke voorgestelde score, definitieve score en wijzigingshistorie blijven gescheiden.
@@ -18,9 +18,13 @@ Opslag schrijft naar `scorecards.tmp`, flusht en vervangt de primaire file via r
 
 Foto's hebben een eigen `photos/<id>.<ext>` en `photos/<id>.json` met kaart-id, serie-index en opnametijd. JSON-kaartuitwisseling bevat geen foto's of absolute bestandspaden. Er wordt niets automatisch geüpload. Opslagquota, fotocompressie en verwijderbeleid volgen later.
 
-## Fotoherkenning — volgende ontwikkelfase
+## Fotoherkenning — lokale baseline
 
-`PhotoAnalyzer` heeft een verwisselbare engine. `PendingPhotoAnalyzer` meldt dat herkenning nog niet beschikbaar is. Er is geen dummy-model of willekeurige score.
+`PhotoAnalyzer` wordt geïmplementeerd door `LocalPhotoAnalyzer` met de pure Dart `image`-bibliotheek. EXIF-oriëntatie wordt verwerkt vóór detectie en de preview gebruikt hetzelfde coördinatenstelsel. Eén geel component levert de initiële ellips; geel/rood- en rood/blauw-overgangen begrenzen een projectieve fit. Radiale kleurcontrole wijst ongeschikte beelden af. In het gerectificeerde vlak leveren houtkleur/lokaal contrast en langwerpige componenten kandidaat-inslagen. Het binnenste schachtuiteinde is een heuristiek, geen bewezen inslag; alle voorstellen moeten worden gecontroleerd.
+
+`PhotoReviewDialog` toont ringen en verplaatsbare nummers, biedt vierpuntskalibratie, score-overschrijving en expliciete controle per pijl. De scorekaartcommit behoudt menselijke invoer, ook eerder gewiste scores. Fotometadata bevat geometrie, instellingen, posities en engineversie. Confidence 0 is een interne sentinel voor ongekalibreerd en wordt niet als kans getoond.
+
+Volgende verbeteringen:
 
 1. Kies het juiste blazoen en het expliciete scoreprofiel, inclusief compound indoor en meervoudige blazoenen.
 2. Beoordeel scherpte, zichtbaarheid, belichting en voldoende resolutie.
@@ -41,6 +45,6 @@ Geen backend in versie 0.1.0. Ontwerp voordat accounts worden toegevoegd een API
 
 ## Platformlevering
 
-Een gedeelde Flutter/Dart-UI en domeinlaag, aparte native launchers. Android gebruikt Kotlin; iOS/macOS Swift; Windows de Flutter C++ runner. Camera en analyse zijn mobiele services; het fotoarchief en de viewer werken op alle platforms. iOS en macOS builden op macOS, Windows op Windows en Android op een machine met Android SDK.
+Een gedeelde Flutter/Dart-UI en domeinlaag, aparte native launchers. Android gebruikt Kotlin; iOS/macOS Swift; Windows de Flutter C++ runner. Camera-opname is een mobiele service; analyse is gedeeld; het fotoarchief en de viewer werken op alle platforms. iOS en macOS builden op macOS, Windows op Windows en Android op een machine met Android SDK.
 
 CI gebruikt debugbuilds en een iOS simulatorbuild. Distributie vereist later signing, bundle identifiers en winkel-/desktopinstallatiepakketten. De actuele resultaten en debugbuilds staan in GitHub Actions. Camera, fototoegang en opslag moeten vóór distributie ook op echte apparaten worden getest.

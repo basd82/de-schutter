@@ -1,12 +1,14 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../app_controller.dart';
 import '../domain/scorecard.dart';
-import '../features/photo/photo_analyzer.dart';
+import '../features/photo/local_photo_analyzer.dart';
+import 'photo_review_dialog.dart';
 import '../features/photo/photo_service.dart';
 
 class ScorecardApp extends StatelessWidget {
@@ -106,6 +108,37 @@ class _ScorecardHomeState extends State<ScorecardHome> {
         );
       }
       return false;
+    }
+  }
+
+  Future<void> closeApp() async {
+    if (busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('De Schutter afsluiten?'),
+        content: const Text(
+          'Je opgeslagen scorekaarten blijven bewaard op dit apparaat.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuleren'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Afsluiten'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    if (kIsWeb) {
+      message('Sluit dit browsertabblad om De Schutter af te sluiten.');
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      message('Ga naar het beginscherm om De Schutter te verlaten.');
+    } else {
+      await SystemNavigator.pop();
     }
   }
 
@@ -357,56 +390,93 @@ class _ScorecardHomeState extends State<ScorecardHome> {
     final card = controller.cards.firstWhere(
       (c) => c.id == photo.capture.cardId,
     );
-    final analysis = PhotoService.supported
-        ? await PendingPhotoAnalyzer().analyze(
-            photo.file,
-            target: card.target,
-            expectedArrows: card.arrowsPerEnd,
-          )
-        : const PhotoAnalysis(
-            proposals: [],
-            available: false,
-            message:
-                'Bewaarde blazoenfoto. Je kunt inzoomen en de scores op de kaart handmatig aanpassen.',
-          );
-    if (!mounted) {
-      return;
-    }
-    await showDialog<void>(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Foto · serie ${photo.capture.endIndex + 1}'),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: 300,
-                  child: InteractiveViewer(
-                    child: Image.file(
-                      photo.file,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) =>
-                          const Text('Deze foto kan niet worden weergegeven.'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(analysis.message),
-              ],
-            ),
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Expanded(child: Text('Blazoen en pijlen analyseren…')),
+            ],
           ),
         ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Scores handmatig invullen'),
-          ),
-        ],
       ),
     );
+    final analysis = await LocalPhotoAnalyzer().analyze(
+      photo.file,
+      target: card.target,
+      expectedArrows: card.arrowsPerEnd,
+    );
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    if (analysis.preview == null) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Fotoherkenning'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 250,
+                child: Image.file(
+                  photo.file,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      const Text('Foto niet weer te geven.'),
+                ),
+              ),
+              Text(analysis.message),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Scores handmatig invullen'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    Map<String, dynamic>? previous;
+    try {
+      previous = await widget.photos.readReview(photo);
+    } catch (_) {
+      /* A saved image remains usable if its review metadata is damaged. */
+    }
+    if (!mounted) return;
+    final result = await showDialog<ReviewedPhoto>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PhotoReviewDialog(
+        analysis: analysis,
+        card: card,
+        end: photo.capture.endIndex,
+        previous: previous,
+      ),
+    );
+    if (result == null) return;
+    try {
+      await widget.photos.saveReview(photo, result.metadata);
+      await controller.confirmPhotoEnd(
+        card.id,
+        photo.capture.endIndex,
+        result.scores,
+        corrected: result.corrected,
+        proposals: result.proposals,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Opslaan mislukt: $e')));
+      }
+    }
   }
 
   Future<void> viewPhotos(Scorecard card, int end) async {
@@ -454,6 +524,11 @@ class _ScorecardHomeState extends State<ScorecardHome> {
         appBar: AppBar(
           title: const Text('De Schutter'),
           actions: [
+            IconButton(
+              tooltip: 'Afsluiten',
+              onPressed: busy ? null : closeApp,
+              icon: const Icon(Icons.power_settings_new),
+            ),
             IconButton(
               tooltip: 'Scorekaart importeren',
               onPressed: busy ? null : importCard,
@@ -680,12 +755,16 @@ class _NewCardDialogState extends State<NewCardDialog> {
       club = TextEditingController(),
       distance = TextEditingController(text: '18');
   int arrows = 3, ends = 12;
+  double targetCm = 40;
+  bool smallTen = false, countX = false;
+  final shaftController = TextEditingController(text: '0');
   String bow = 'Recurve', target = 'WA 10-ringen';
   @override
   void dispose() {
     shooter.dispose();
     club.dispose();
     distance.dispose();
+    shaftController.dispose();
     super.dispose();
   }
 
@@ -757,6 +836,39 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 isExpanded: true,
                 onChanged: (t) => target = t!,
               ),
+              DropdownButtonFormField<double>(
+                initialValue: targetCm,
+                decoration: const InputDecoration(labelText: 'Blazoendiameter'),
+                items: [
+                  for (final cm in [20.0, 40.0, 60.0, 80.0, 122.0])
+                    DropdownMenuItem(value: cm, child: Text('${cm.toInt()} cm')),
+                ],
+                onChanged: (v) => targetCm = v!,
+              ),
+              TextFormField(
+                controller: shaftController,
+                decoration: const InputDecoration(labelText: 'Pijldiameter (mm)', helperText: '0 = onbekend'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  final mm = double.tryParse((v ?? '').replaceAll(',', '.'));
+                  return mm == null || !mm.isFinite || mm < 0 || mm > 20
+                      ? 'Vul een pijldiameter van 0–20 mm in.'
+                      : null;
+                },
+              ),
+              CheckboxListTile(
+                title: const Text('Kleine compound-10 (binnenring)'),
+                value: smallTen,
+                onChanged: (v) => setState(() {
+                  smallTen = v!;
+                  if (smallTen) countX = false;
+                }),
+              ),
+              CheckboxListTile(
+                title: const Text('Binnenring als X tellen'),
+                value: countX,
+                onChanged: smallTen ? null : (v) => setState(() => countX = v!),
+              ),
               DropdownButtonFormField(
                 initialValue: arrows,
                 decoration: const InputDecoration(
@@ -800,6 +912,10 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 target: target,
                 arrowsPerEnd: arrows,
                 endCount: ends,
+                targetCm: targetCm,
+                shaftMm: double.parse(shaftController.text.replaceAll(',', '.')),
+                smallTen: smallTen || target == 'WA indoor compound (binnenste 10)',
+                countX: !smallTen && target != 'WA indoor compound (binnenste 10)' && countX,
               ),
             );
           }

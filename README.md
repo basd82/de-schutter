@@ -1,8 +1,8 @@
 # De Schutter
 
-Eén Flutter-app voor **iPhone, Android, macOS en Windows**, ontwikkeld met IntelliJ IDEA. Scorekaarten werken offline op ieder platform. Foto-opname en toekomstige blazoenherkenning zijn uitsluitend voor de mobiele apps. Bestaande blazoenfoto’s bekijken kan ook op desktop.
+Eén Flutter-app voor **iPhone, Android, macOS en Windows**, ontwikkeld met IntelliJ IDEA. Scorekaarten werken offline op ieder platform. Foto-opname werkt op mobiel. Foto’s selecteren, lokaal analyseren en controleren kan ook op desktop.
 
-Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige scorekaarten, lokale opslag, import/export via JSON en wijzigingshistorie zijn geïmplementeerd. Mobiel kan foto's per serie vastleggen. Alle platforms kunnen bestaande foto's openen en terugkijken. **Automatische ring- en pijlherkenning is nog niet geïmplementeerd.** De app meldt dit en verzint geen scores of zekerheidspercentages.
+Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige scorekaarten, lokale opslag, import/export via JSON en wijzigingshistorie zijn geïmplementeerd. Mobiel kan foto's per serie vastleggen. Alle platforms kunnen bestaande foto's openen en terugkijken. **Lokale ring- en pijlherkenning voor één volledig WA 10-ringenblazoen is nu beschikbaar als experimentele beeldverwerking.** De app zoekt gekleurde ringen en langwerpige schachten, corrigeert perspectief en toont scorevoorstellen. Oude gaten, schaduwen en overlappende pijlen kunnen fouten geven; er worden geen zekerheidspercentages getoond.
 
 ## Platforms
 
@@ -12,9 +12,10 @@ Dit is een eerste projectbasis (0.1.0), geen gepubliceerde winkelapp. Handmatige
 | Scores corrigeren met historie | Ja | Ja | Ja | Ja |
 | Offline bewaren | Ja | Ja | Ja | Ja |
 | JSON-kaarten uitwisselen | Ja | Ja | Ja | Ja |
-| Foto maken / galerij | Ja | Ja | — | — |
+| Foto maken | Ja | Ja | — | — |
+| Foto selecteren | Ja | Ja | Ja | Ja |
 | Bestaande foto openen / terugkijken | Ja | Ja | Ja | Ja |
-| Automatisch scorevoorstel | Gepland | Gepland | — | — |
+| Automatisch scorevoorstel (experimenteel) | Ja | Ja | Ja | Ja |
 | Accounts en server-synchronisatie | Gepland | Gepland | Gepland | Gepland |
 
 ## Openen in IntelliJ IDEA
@@ -45,7 +46,7 @@ Elke bevestigde wijziging wordt eerst op schijf bewaard. Pas na een geslaagde op
 
 Op mobiel: kies het foto-icoon van een serie om een foto te maken of uit de galerij te kiezen. De originele foto en de koppeling naar kaart/serie worden lokaal bewaard. Zoom om de inslagen te beoordelen en vul daarna de scores zelf in. Met het galerij-icoon kun je opgeslagen foto's opnieuw bekijken. Bij een door Android onderbroken camera-activiteit probeert de app de opname na herstart te herstellen.
 
-Op desktop kun je met het map-icoon een bestaande blazoenfoto kiezen. De foto wordt bij die serie bewaard en kan daarna via het galerij-icoon worden teruggekeken. Camera en analyse ontbreken op desktop. Foto’s van je telefoon worden nog niet automatisch gesynchroniseerd: breng ze zelf over en open ze op desktop.
+Op desktop kun je met het map-icoon een bestaande blazoenfoto kiezen. De foto wordt bij die serie bewaard en kan daarna via het galerij-icoon worden teruggekeken. Camera-opname ontbreekt op desktop; lokale analyse werkt wel. Foto’s van je telefoon worden nog niet automatisch gesynchroniseerd: breng ze zelf over en open ze op desktop.
 
 Met **Exporteren** kopieer je de JSON-scorekaart; sla de tekst op als `.json` of plak die op een ander apparaat in **Importeren**. Historie en oorspronkelijke herkenningsvoorstellen zijn onderdeel van dit formaat; foto's worden niet meegestuurd. Importeren weigert een al aanwezige kaart-id. Er is nog geen automatische synchronisatie of het samenvoegen van wijzigingen op meerdere apparaten.
 
@@ -74,7 +75,7 @@ flutter pub get
 
 `tool/publish_github.sh` is alleen bedoeld voor een nieuwe repository. Het stopt als `basd82/de-schutter` of een origin-remote al bestaat.
 
-GitHub Actions controleert de opmaak, Flutter-analyse, **8 tests** en **14 zelfstandige offline controles**. Daarnaast bouwt de workflow alle vier platforms. Bekijk de actuele resultaten en download de debugbuilds via het tabblad **Actions**. Test camera, fototoegang en opslag ook op echte apparaten voordat je een release verspreidt.
+GitHub Actions controleert de opmaak, Flutter-analyse, tests en zelfstandige offline controles. Daarnaast bouwt de workflow alle vier platforms. Bekijk de actuele resultaten en download de debugbuilds via het tabblad **Actions**. Test camera, fototoegang en opslag ook op echte apparaten voordat je een release verspreidt.
 
 ## Structuur
 
@@ -91,3 +92,16 @@ docs/ROADMAP.md             vervolgstappen
 ```
 
 De originele voorbeeldfoto's worden niet als publieke repository-assets of als runtime-dataset opgenomen. Verwerk ze later lokaal als afzonderlijke testset. Native sjablonen en standaardiconen komen van Flutter; de bijbehorende licenties staan in `docs/`.
+
+## Blazoenfoto analyseren
+
+1. Kies een foto bij de juiste serie. Foto’s blijven lokaal; analyse draait buiten de UI-thread.
+2. Controleer of de groene ringen samenvallen met het blazoen. Met **Blazoen afstellen** sleep je B/R/O/L naar de vier buitenste 1-ringpunten. Dit werkt ook wanneer automatische detectie mislukt.
+3. Verplaats de genummerde pijlen naar de werkelijke inslagpunten, verwijder fout gevonden pijlen en tik om ontbrekende pijlen toe te voegen. Een missende pijl krijgt nooit automatisch M.
+4. Kies de fysieke blazoendiameter en pijldiameter voor de lijnregel. Bij 0 mm is de pijldiameter onbekend: controleer lijngevallen handmatig. Controleer de kleine compound-10 en het gebruik van X; defaults zijn slechts suggesties op basis van boog en afstand.
+5. Iedere score kan via de scoreknoppen worden overschreven. Vink de blazoencontrole en elke pijlcontrole aan. Alleen bij precies het verwachte aantal pijlen kun je bevestigen.
+6. Bevestigde scores worden in één opslagactie overgenomen; bestaande ingevoerde of handmatig gewiste scores blijven beschermd. Ze kunnen op de scorekaart nog steeds handmatig worden gewijzigd.
+
+Geometrie, gecorrigeerde punten, instellingen en voorstellen blijven bij de foto bewaard. De scorekaart bewaart voorstellen, definitieve scores en wijzigingshistorie. Een heropende foto vereist opnieuw controle. Herkenning is geen gevalideerde automatische jurering: vooral kruisende schachten en veren vragen correctie. Meervoudige/Field-blazoenen worden nog niet ondersteund. JPEG/PNG werken; niet decodeerbare bestanden houden hun oorspronkelijke foto en krijgen handmatige score-invoer.
+
+Voor lokale evaluatie met eigen foto’s: `dart run tool/evaluate_photos.dart /pad/naar/fotos /tmp/evaluatie`. Dit hulpmiddel schrijft alleen lokale overlays, zonder foto’s te uploaden.

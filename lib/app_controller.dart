@@ -41,4 +41,22 @@ class AppController extends ChangeNotifier {
         for (final card in _cards)
           if (card.id == id) card.setArrow(end, arrow, score) else card,
       ]);
+  Future<void> confirmPhotoEnd(
+    String id,
+    int end,
+    List<Score> scores, {
+    Set<int> corrected = const {},
+    List<Score>? proposals,
+  }) => _commit([
+    for (final card in _cards)
+      if (card.id == id)
+        card.confirmPhotoEnd(
+          end,
+          scores,
+          corrected: corrected,
+          proposals: proposals,
+        )
+      else
+        card,
+  ]);
 }

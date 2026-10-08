@@ -98,6 +98,24 @@ class PhotoService {
     return saved;
   }
 
+  Future<Map<String, dynamic>?> readReview(SavedPhoto photo) async {
+    final file = File('${root.path}/photos/${photo.capture.id}.json');
+    final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    return json['review'] == null
+        ? null
+        : Map<String, dynamic>.from(json['review'] as Map);
+  }
+
+  Future<void> saveReview(SavedPhoto photo, Map<String, dynamic> review) async {
+    final file = File('${root.path}/photos/${photo.capture.id}.json');
+    final next = File('${file.path}.tmp');
+    await next.writeAsString(
+      jsonEncode({...photo.capture.toJson(), 'review': review}),
+      flush: true,
+    );
+    await next.rename(file.path);
+  }
+
   Future<List<SavedPhoto>> list(String cardId, int endIndex) async {
     final directory = Directory('${root.path}/photos');
     if (!await directory.exists()) {
