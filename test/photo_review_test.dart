@@ -63,8 +63,8 @@ void main() {
       );
       expect(save().onPressed, isNull);
       final checks = find.byType(CheckboxListTile);
-      // Target confirmation, then the three arrow confirmations.
-      for (var i = 0; i < 4; i++) {
+      // The three arrows must be confirmed; no separate target checkbox.
+      for (var i = 0; i < 3; i++) {
         await tester.ensureVisible(checks.at(i));
         await tester.tap(checks.at(i));
         await tester.pumpAndSettle();
@@ -75,8 +75,8 @@ void main() {
       await tester.tap(miss);
       await tester.pumpAndSettle();
       expect(save().onPressed, isNull);
-      await tester.ensureVisible(checks.at(1));
-      await tester.tap(checks.at(1));
+      await tester.ensureVisible(checks.at(0));
+      await tester.tap(checks.at(0));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bevestigen en opslaan'));
       await tester.pumpAndSettle();
@@ -124,8 +124,8 @@ void main() {
     expect(find.textContaining('Pijl 3: M'), findsOneWidget);
     expect(find.text('Misser gecontroleerd (geen inslagpunt nodig)'), findsOneWidget);
     final checks = find.byType(CheckboxListTile);
-    // Target confirmation and three arrow confirmations.
-    for (var i = 0; i < 4; i++) {
+    // Confirm three arrows without a target checkbox.
+    for (var i = 0; i < 3; i++) {
       await tester.ensureVisible(checks.at(i));
       await tester.tap(checks.at(i));
       await tester.pumpAndSettle();
