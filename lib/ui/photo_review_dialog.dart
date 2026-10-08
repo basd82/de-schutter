@@ -48,7 +48,8 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
   late List<Offset> anchors;
   final hits = <_Hit>[];
   int selected = 0;
-  bool calibration = false, targetChecked = false, shaftValid = true;
+  bool calibration = false;
+  final TransformationController zoomController = TransformationController();
   double get shaftMm => widget.card.shaftMm;
   double get targetCm => widget.card.targetCm;
   bool get smallTen => widget.card.smallTen;
@@ -115,7 +116,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
       for (final p in [(0.0, -1.0), (1.0, 0.0), (0.0, 1.0), (-1.0, 0.0)])
         _offset(geometry.imagePoint(p.$1, p.$2)),
     ];
-    calibration = a.geometry == null && old == null;
+    calibration = false;
     _rescore();
   }
 
@@ -146,7 +147,6 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
       }
       geometry = updated;
       anchors = next;
-      targetChecked = false;
       _rescore();
       error = null;
     } on FormatException catch (e) {
@@ -155,10 +155,22 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
   }
 
   @override
+  void dispose() {
+    zoomController.dispose();
+    super.dispose();
+  }
+
+  void changeZoom(double factor) {
+    final scale = (zoomController.value.getMaxScaleOnAxis() * factor).clamp(1.0, 5.0);
+    zoomController.value = Matrix4.diagonal3Values(scale, scale, 1);
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final a = widget.analysis;
     final canSave =
-        targetChecked &&
+        !calibration &&
         hits.length == widget.card.arrowsPerEnd &&
         hits.every((h) => h.checked);
     return AlertDialog(
@@ -173,11 +185,33 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
               Text(a.message),
               const SizedBox(height: 8),
               if (a.preview != null)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      tooltip: 'Uitzoomen',
+                      onPressed: () => changeZoom(1 / 1.5),
+                      icon: const Icon(Icons.zoom_out),
+                    ),
+                    IconButton(
+                      tooltip: 'Inzoomen',
+                      onPressed: () => changeZoom(1.5),
+                      icon: const Icon(Icons.zoom_in),
+                    ),
+                    TextButton(
+                      onPressed: () => zoomController.value = Matrix4.identity(),
+                      child: const Text('100%'),
+                    ),
+                  ],
+                ),
+              if (a.preview != null)
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final width = constraints.maxWidth;
                     final scale = width / a.imageWidth;
                     return InteractiveViewer(
+                      transformationController: zoomController,
+                      minScale: 1,
                       maxScale: 5,
                       child: SizedBox(
                         width: width,
@@ -292,23 +326,14 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
               TextButton(
                 onPressed: () => setState(() {
                   calibration = !calibration;
-                  targetChecked = false;
                 }),
                 child: Text(
                   calibration
                       ? 'Klaar met blazoen afstellen'
-                      : 'Blazoen afstellen',
+                      : 'Blazoen verkeerd herkend? Ringen aanpassen',
                 ),
               ),
               Text('Kaartinstellingen: blazoen ${targetCm.toInt()} cm · pijldiameter $shaftMm mm · ${smallTen ? 'compound binnenste 10' : (countX ? 'binnenring X' : 'normale 10')}'),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Blazoen en scoringsringen gecontroleerd'),
-                value: targetChecked,
-                onChanged: calibration
-                    ? null
-                    : (v) => setState(() => targetChecked = v!),
-              ),
               for (var i = 0; i < hits.length; i++)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
