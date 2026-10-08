@@ -144,6 +144,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
       ]);
       // Keep arrow markers on the same image pixels while changing calibration.
       for (final h in hits) {
+        if (h.missing) continue;
         final image = geometry.imagePoint(h.point.dx, h.point.dy);
         h.point = _offset(updated.targetPoint(image.x, image.y));
       }
