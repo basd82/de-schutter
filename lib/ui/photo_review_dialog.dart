@@ -49,8 +49,10 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
   final hits = <_Hit>[];
   int selected = 0;
   bool calibration = false, targetChecked = false, shaftValid = true;
-  double shaftMm = 0, targetCm = 40;
-  late bool smallTen, countX;
+  double get shaftMm => widget.card.shaftMm;
+  double get targetCm => widget.card.targetCm;
+  bool get smallTen => widget.card.smallTen;
+  bool get countX => widget.card.countX;
   String? error;
   TargetScoring get scoring => TargetScoring(
     diameterRatio: shaftMm / (targetCm * 10),
@@ -74,8 +76,6 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
           0,
           0,
         ]);
-    smallTen = widget.card.bow == 'Compound' && widget.card.distance <= 25;
-    countX = widget.card.distance > 25;
     for (final p in a.proposals) {
       hits.add(_Hit(Offset(p.x * 2 - 1, p.y * 2 - 1), p.score));
     }
@@ -85,10 +85,6 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
         geometry = TargetGeometry(
           (old['geometry'] as List).map((v) => (v as num).toDouble()).toList(),
         );
-        shaftMm = (old['shaftMm'] as num).toDouble();
-        targetCm = (old['targetCm'] as num).toDouble();
-        smallTen = old['smallTen'] as bool;
-        countX = old['countX'] as bool;
         hits.clear();
         for (final h in old['hits'] as List) {
           hits.add(
@@ -304,74 +300,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                       : 'Blazoen afstellen',
                 ),
               ),
-              Wrap(
-                spacing: 12,
-                children: [
-                  DropdownButton<double>(
-                    value: targetCm,
-                    items: [20.0, 40.0, 60.0, 80.0, 122.0]
-                        .map(
-                          (v) => DropdownMenuItem(
-                            value: v,
-                            child: Text('Blazoen ${v.toInt()} cm'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() {
-                      targetCm = v!;
-                      _rescore();
-                    }),
-                  ),
-                  SizedBox(
-                    width: 170,
-                    child: TextFormField(
-                      initialValue: '$shaftMm',
-                      decoration: const InputDecoration(
-                        labelText: 'Pijldiameter (mm)',
-                        helperText: '0 = onbekend; lijn controleren',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (v) => setState(() {
-                        final value = double.tryParse(v.replaceAll(',', '.'));
-                        if (value == null ||
-                            !value.isFinite ||
-                            value < 0 ||
-                            value > 20) {
-                          shaftValid = false;
-                          error = 'Pijldiameter moet tussen 0 en 20 mm liggen.';
-                        } else {
-                          shaftValid = true;
-                          shaftMm = value;
-                          error = null;
-                          _rescore();
-                        }
-                      }),
-                    ),
-                  ),
-                ],
-              ),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Kleine compound-10 (binnenring)'),
-                value: smallTen,
-                onChanged: (v) => setState(() {
-                  smallTen = v!;
-                  if (smallTen) countX = false;
-                  _rescore();
-                }),
-              ),
-              if (!smallTen)
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Binnenring als X tellen'),
-                  value: countX,
-                  onChanged: (v) => setState(() {
-                    countX = v!;
-                    _rescore();
-                  }),
-                ),
+              Text('Kaartinstellingen: blazoen ${targetCm.toInt()} cm · pijldiameter $shaftMm mm · ${smallTen ? 'compound binnenste 10' : (countX ? 'binnenring X' : 'normale 10')}'),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Blazoen en scoringsringen gecontroleerd'),
