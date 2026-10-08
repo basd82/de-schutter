@@ -35,10 +35,12 @@ class _Hit {
     this.score, {
     this.corrected = false,
     this.overridden = false,
+    this.missing = false,
   }) : proposed = score;
   Offset point;
   Score score, proposed;
   bool corrected, overridden, checked = false;
+  bool missing;
 }
 
 class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
@@ -91,10 +93,13 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
         for (final h in old['hits'] as List) {
           hits.add(
             _Hit(
-              Offset((h['x'] as num).toDouble(), (h['y'] as num).toDouble()),
+              h['missing'] == true
+                  ? Offset.zero
+                  : Offset((h['x'] as num).toDouble(), (h['y'] as num).toDouble()),
               Score.parse(h['score'] as String),
               corrected: h['corrected'] as bool,
               overridden: h['overridden'] as bool? ?? h['corrected'] as bool,
+              missing: h['missing'] as bool? ?? false,
             ),
           );
           hits.last.proposed = Score.parse(
@@ -104,6 +109,11 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
       } catch (_) {
         error = 'Eerdere correcties konden niet worden geladen.';
       }
+    }
+    // A missing detection is only a provisional miss, not a confirmed M.
+    // Create one reviewable entry per expected arrow, even outside the photo.
+    while (hits.length < widget.card.arrowsPerEnd) {
+      hits.add(_Hit(Offset.zero, Score.parse('M'), missing: true));
     }
     anchors = [
       for (final p in [(0.0, -1.0), (1.0, 0.0), (0.0, 1.0), (-1.0, 0.0)])
@@ -116,7 +126,9 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
   Offset _offset(math.Point<double> p) => Offset(p.x, p.y);
   void _rescore() {
     for (final h in hits) {
-      if (!h.overridden) {
+      if (h.missing) {
+        h.score = Score.parse('M');
+      } else if (!h.overridden) {
         h.score = scoring.score(h.point.dx, h.point.dy);
         h.proposed = h.score;
       }
@@ -177,9 +189,10 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                           onTapUp: calibration
                               ? null
                               : (details) => setState(() {
-                                  if (hits.length >= widget.card.arrowsPerEnd) {
-                                    error =
-                                        'Verwijder eerst een fout gevonden pijl.';
+                                  final missingIndex = hits.indexWhere((h) => h.missing);
+                                  if (missingIndex < 0 &&
+                                      hits.length >= widget.card.arrowsPerEnd) {
+                                    error = 'Verwijder eerst een fout gevonden pijl.';
                                     return;
                                   }
                                   final p = geometry.targetPoint(
@@ -189,10 +202,18 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                                   if (p.x.abs() > 1.2 || p.y.abs() > 1.2) {
                                     return;
                                   }
-                                  hits.add(
-                                    _Hit(_offset(p), scoring.score(p.x, p.y)),
+                                  final found = _Hit(
+                                    _offset(p),
+                                    scoring.score(p.x, p.y),
+                                    corrected: true,
                                   );
-                                  selected = hits.length - 1;
+                                  if (missingIndex >= 0) {
+                                    hits[missingIndex] = found;
+                                    selected = missingIndex;
+                                  } else {
+                                    hits.add(found);
+                                    selected = hits.length - 1;
+                                  }
                                   error = null;
                                 }),
                           child: Stack(
@@ -223,6 +244,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                                   ),
                               if (!calibration)
                                 for (var i = 0; i < hits.length; i++)
+                                  if (!hits[i].missing)
                                   _marker(
                                     _offset(
                                           geometry.imagePoint(
@@ -266,8 +288,9 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                 calibration
                     ? 'Sleep B/R/O/L naar boven, rechts, onder en links op de buitenste '
                           '1-ring. De getekende ringen moeten samenvallen met het blazoen.'
-                    : 'Tik voor een ontbrekende pijl. Sleep een nummer naar het '
-                          'inslagpunt. Knijp om in te zoomen.',
+                    : 'Niet-herkende pijlen staan voorlopig op M. '
+                          'Tik op een gevonden inslagpunt om een M te vervangen. '
+                          'Sleep een nummer om te corrigeren. Knijp om in te zoomen.',
               ),
               TextButton(
                 onPressed: () => setState(() {
@@ -367,7 +390,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                           Expanded(
                             child: Text(
                               'Pijl ${i + 1}: ${hits[i].score.label}'
-                              '${scoring.lineCase(hits[i].point.dx, hits[i].point.dy) ? ' · lijngeval' : ''}',
+                              '${hits[i].missing ? ' · niet herkend (voorlopige misser)' : (scoring.lineCase(hits[i].point.dx, hits[i].point.dy) ? ' · lijngeval' : '')}',
                             ),
                           ),
                           if (i < widget.card.arrowsPerEnd &&
@@ -429,6 +452,10 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                               label: Text(label),
                               selected: hits[i].score.label == label,
                               onSelected: (_) => setState(() {
+                                if (hits[i].missing && label != 'M') {
+                                  error = 'Wijs eerst het inslagpunt aan op de foto.';
+                                  return;
+                                }
                                 hits[i].score = Score.parse(label);
                                 hits[i].overridden = true;
                                 hits[i].corrected = true;
@@ -440,7 +467,9 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                       ),
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Inslagpunt en score gecontroleerd'),
+                        title: Text(hits[i].missing
+                            ? 'Misser gecontroleerd (geen inslagpunt nodig)'
+                            : 'Inslagpunt en score gecontroleerd'),
                         value: hits[i].checked,
                         onChanged: (v) => setState(() => hits[i].checked = v!),
                       ),
@@ -454,7 +483,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                 ),
               Text(
                 '${hits.length}/${widget.card.arrowsPerEnd} pijlen. '
-                'Een gemiste pijl voeg je toe en geef je handmatig M.',
+                'Niet-herkende pijlen staan voorlopig op M. Bevestig iedere misser.'
               ),
             ],
           ),
@@ -486,8 +515,10 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                       'hits': [
                         for (final h in hits)
                           {
-                            'x': h.point.dx,
-                            'y': h.point.dy,
+                            'x': h.missing ? null : h.point.dx,
+                            'y': h.missing ? null : h.point.dy,
+                            'missing': h.missing,
+                            'reason': h.missing ? 'confirmed_miss' : (h.corrected ? 'manually_corrected' : 'detected'),
                             'score': h.score.label,
                             'corrected': h.corrected,
                             'overridden': h.overridden,
