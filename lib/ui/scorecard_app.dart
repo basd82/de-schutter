@@ -718,12 +718,16 @@ class _NewCardDialogState extends State<NewCardDialog> {
       club = TextEditingController(),
       distance = TextEditingController(text: '18');
   int arrows = 3, ends = 12;
+  double targetCm = 40;
+  bool smallTen = false, countX = false;
+  final shaftController = TextEditingController(text: '0');
   String bow = 'Recurve', target = 'WA 10-ringen';
   @override
   void dispose() {
     shooter.dispose();
     club.dispose();
     distance.dispose();
+    shaftController.dispose();
     super.dispose();
   }
 
@@ -795,6 +799,39 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 isExpanded: true,
                 onChanged: (t) => target = t!,
               ),
+              DropdownButtonFormField<double>(
+                initialValue: targetCm,
+                decoration: const InputDecoration(labelText: 'Blazoendiameter'),
+                items: [
+                  for (final cm in [20.0, 40.0, 60.0, 80.0, 122.0])
+                    DropdownMenuItem(value: cm, child: Text('${cm.toInt()} cm')),
+                ],
+                onChanged: (v) => targetCm = v!,
+              ),
+              TextFormField(
+                controller: shaftController,
+                decoration: const InputDecoration(labelText: 'Pijldiameter (mm)', helperText: '0 = onbekend'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  final mm = double.tryParse((v ?? '').replaceAll(',', '.'));
+                  return mm == null || !mm.isFinite || mm < 0 || mm > 20
+                      ? 'Vul een pijldiameter van 0–20 mm in.'
+                      : null;
+                },
+              ),
+              CheckboxListTile(
+                title: const Text('Kleine compound-10 (binnenring)'),
+                value: smallTen,
+                onChanged: (v) => setState(() {
+                  smallTen = v!;
+                  if (smallTen) countX = false;
+                }),
+              ),
+              CheckboxListTile(
+                title: const Text('Binnenring als X tellen'),
+                value: countX,
+                onChanged: smallTen ? null : (v) => setState(() => countX = v!),
+              ),
               DropdownButtonFormField(
                 initialValue: arrows,
                 decoration: const InputDecoration(
@@ -838,6 +875,10 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 target: target,
                 arrowsPerEnd: arrows,
                 endCount: ends,
+                targetCm: targetCm,
+                shaftMm: double.parse(shaftController.text.replaceAll(',', '.')),
+                smallTen: smallTen || target == 'WA indoor compound (binnenste 10)',
+                countX: !smallTen && target != 'WA indoor compound (binnenste 10)' && countX,
               ),
             );
           }
