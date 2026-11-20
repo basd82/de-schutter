@@ -403,7 +403,6 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                                 hits[i] = swap;
                                 selected = to;
                               }
-                              for (final h in hits) {}
                             }),
                           ),
                         ],
