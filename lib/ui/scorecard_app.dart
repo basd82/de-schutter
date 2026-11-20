@@ -1,4 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart' as file_selector;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../app_controller.dart';
 import '../domain/scorecard.dart';
+import '../features/export/photo_export.dart';
 import '../features/photo/local_photo_analyzer.dart';
 import 'photo_review_dialog.dart';
 import '../features/photo/photo_service.dart';
@@ -145,7 +151,10 @@ class _ScorecardHomeState extends State<ScorecardHome> {
   Future<void> newCard() async {
     final card = await showDialog<Scorecard>(
       context: context,
-      builder: (_) => const NewCardDialog(),
+      builder: (_) => NewCardDialog(
+        initialShooter: controller.shooterDefaults.shooter,
+        initialClub: controller.shooterDefaults.club,
+      ),
     );
     if (card != null && await perform(() => controller.add(card)) && mounted) {
       setState(() => selectedId = card.id);
@@ -204,6 +213,56 @@ class _ScorecardHomeState extends State<ScorecardHome> {
     }
   }
 
+  bool exportingPhotos = false;
+
+  Future<void> exportWithPhotos(Scorecard card, Rect origin) async {
+    if (exportingPhotos) return;
+    setState(() => exportingPhotos = true);
+    Directory? temporary;
+    try {
+      final file = await PhotoExport.create(
+        card,
+        widget.photos,
+        await getTemporaryDirectory(),
+      );
+      temporary = file.parent;
+      if (!mounted) return;
+      if (Platform.isIOS || Platform.isAndroid) {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: 'application/zip')],
+            subject: 'De Schutter — scorekaart met foto’s',
+            sharePositionOrigin: origin,
+          ),
+        );
+      } else {
+        final location = await file_selector.getSaveLocation(
+          suggestedName: 'de-schutter-met-fotos.zip',
+          acceptedTypeGroups: [
+            const file_selector.XTypeGroup(
+              label: 'ZIP met foto’s',
+              extensions: ['zip'],
+            ),
+          ],
+        );
+        if (location != null) {
+          await file.copy(location.path);
+          if (mounted) message('Scorekaart met foto’s opgeslagen.');
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        message('Export met foto’s is niet gelukt. Probeer opnieuw.');
+      }
+    } finally {
+      // Keep a shared mobile file available while the receiving app reads it.
+      if (temporary != null && !Platform.isIOS && !Platform.isAndroid) {
+        await temporary.delete(recursive: true);
+      }
+      if (mounted) setState(() => exportingPhotos = false);
+    }
+  }
+
   Future<void> exportCard(Scorecard card) async {
     await showDialog<void>(
       context: context,
@@ -216,6 +275,18 @@ class _ScorecardHomeState extends State<ScorecardHome> {
           ),
         ),
         actions: [
+          Builder(
+            builder: (buttonContext) => TextButton.icon(
+              icon: const Icon(Icons.folder_zip_outlined),
+              label: const Text('Exporteren met foto’s (ZIP)'),
+              onPressed: () {
+                final box = buttonContext.findRenderObject()! as RenderBox;
+                final origin = box.localToGlobal(Offset.zero) & box.size;
+                Navigator.pop(context);
+                exportWithPhotos(card, origin);
+              },
+            ),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Sluiten'),
@@ -653,7 +724,7 @@ class _ScorecardHomeState extends State<ScorecardHome> {
                                 DataRow(
                                   cells: [
                                     DataCell(Text('${e + 1}')),
-                                    for (var a = 0; a < card.arrowsPerEnd; a++)
+                                    for (final a in card.sortedArrowIndices(e))
                                       DataCell(
                                         SizedBox(
                                           width: 48,
@@ -744,16 +815,28 @@ class _ScorecardHomeState extends State<ScorecardHome> {
 }
 
 class NewCardDialog extends StatefulWidget {
-  const NewCardDialog({super.key});
+  const NewCardDialog({
+    super.key,
+    this.initialShooter = '',
+    this.initialClub = '',
+  });
+  final String initialShooter, initialClub;
   @override
   State<NewCardDialog> createState() => _NewCardDialogState();
 }
 
 class _NewCardDialogState extends State<NewCardDialog> {
   final form = GlobalKey<FormState>();
-  final shooter = TextEditingController(),
-      club = TextEditingController(),
-      distance = TextEditingController(text: '18');
+  late final TextEditingController shooter, club;
+  final distance = TextEditingController(text: '18');
+
+  @override
+  void initState() {
+    super.initState();
+    shooter = TextEditingController(text: widget.initialShooter);
+    club = TextEditingController(text: widget.initialClub);
+  }
+
   int arrows = 3, ends = 12;
   double targetCm = 40;
   bool smallTen = false, countX = false;
@@ -841,14 +924,22 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 decoration: const InputDecoration(labelText: 'Blazoendiameter'),
                 items: [
                   for (final cm in [20.0, 40.0, 60.0, 80.0, 122.0])
-                    DropdownMenuItem(value: cm, child: Text('${cm.toInt()} cm')),
+                    DropdownMenuItem(
+                      value: cm,
+                      child: Text('${cm.toInt()} cm'),
+                    ),
                 ],
                 onChanged: (v) => targetCm = v!,
               ),
               TextFormField(
                 controller: shaftController,
-                decoration: const InputDecoration(labelText: 'Pijldiameter (mm)', helperText: '0 = onbekend'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Pijldiameter (mm)',
+                  helperText: '0 = onbekend',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 validator: (v) {
                   final mm = double.tryParse((v ?? '').replaceAll(',', '.'));
                   return mm == null || !mm.isFinite || mm < 0 || mm > 20
@@ -913,9 +1004,15 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 arrowsPerEnd: arrows,
                 endCount: ends,
                 targetCm: targetCm,
-                shaftMm: double.parse(shaftController.text.replaceAll(',', '.')),
-                smallTen: smallTen || target == 'WA indoor compound (binnenste 10)',
-                countX: !smallTen && target != 'WA indoor compound (binnenste 10)' && countX,
+                shaftMm: double.parse(
+                  shaftController.text.replaceAll(',', '.'),
+                ),
+                smallTen:
+                    smallTen || target == 'WA indoor compound (binnenste 10)',
+                countX:
+                    !smallTen &&
+                    target != 'WA indoor compound (binnenste 10)' &&
+                    countX,
               ),
             );
           }

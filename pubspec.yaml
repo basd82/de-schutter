@@ -1,13 +1,16 @@
 name: de_schutter
 description: Offline scorekaarten voor handboogschieten, met mobiele fotoverwerking.
 publish_to: none
-version: 0.1.0+1
+version: 0.1.2+3
 environment:
   sdk: '>=3.10.0 <4.0.0'
   flutter: '>=3.47.0'
 dependencies:
   flutter:
     sdk: flutter
+  archive: ^4.3.0
+  file_selector: ^1.1.0
+  share_plus: ^13.3.1
   image: ^4.9.2
   image_picker: 1.2.3
   path_provider: 2.1.6

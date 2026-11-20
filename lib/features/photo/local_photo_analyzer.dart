@@ -38,6 +38,13 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
     required int expectedArrows,
     void Function(String)? trace,
   }) {
+    if (expectedArrows < 1) {
+      throw ArgumentError.value(
+        expectedArrows,
+        'expectedArrows',
+        'Moet positief zijn',
+      );
+    }
     if (target != 'WA 10-ringen') {
       return const PhotoAnalysis(
         proposals: [],
@@ -86,6 +93,7 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
     final points = _findShafts(image, geometry);
     final proposals = <ArrowProposal>[];
     for (final p in points) {
+      if (proposals.length == expectedArrows) break;
       if (proposals.any(
         (other) =>
             math.sqrt(
@@ -107,7 +115,7 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
         ),
       );
     }
-    // Do not invent missing arrows or silently discard surplus detections.
+    // Retain the strongest shaft candidates, never more than the series size.
     return PhotoAnalysis(
       proposals: proposals,
       available: true,
@@ -118,6 +126,7 @@ class LocalPhotoAnalyzer implements PhotoAnalyzer {
       message:
           '${proposals.length} mogelijke pijlen gevonden; verwacht: '
           '$expectedArrows. Controleer het blazoen, alle inslagpunten en scores. '
+          'Maximaal $expectedArrows voorstellen; zwakkere extra detecties vervallen. '
           'Oude gaten, schaduwen en overlappende pijlen kunnen fouten geven. '
           'Zekerheid is niet gekalibreerd.',
     );
@@ -373,7 +382,7 @@ List<math.Point<double>> _findShafts(img.Image image, TargetGeometry g) {
     }
   }
   final components = _components(mask, size, size, (v) => v == 1);
-  final hits = <math.Point<double>>[];
+  final hits = <({math.Point<double> point, double strength})>[];
   for (final pixels in components) {
     if (pixels.length < 25 || pixels.length > 5000) continue;
     var cx = 0.0, cy = 0.0;
@@ -417,7 +426,12 @@ List<math.Point<double>> _findShafts(img.Image image, TargetGeometry g) {
             b.distanceTo(const math.Point(0.0, 0.0))
         ? a
         : b;
-    if (p.distanceTo(const math.Point(0.0, 0.0)) <= 1.02) hits.add(p);
+    if (p.distanceTo(const math.Point(0.0, 0.0)) <= 1.02) {
+      // Long, narrow components are better shaft evidence than short tears.
+      // This is a ranking heuristic, not calibrated confidence.
+      hits.add((point: p, strength: length / math.max(width, 1)));
+    }
   }
-  return hits;
+  hits.sort((a, b) => b.strength.compareTo(a.strength));
+  return [for (final hit in hits) hit.point];
 }

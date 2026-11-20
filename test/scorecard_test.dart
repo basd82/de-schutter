@@ -2,6 +2,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:de_schutter/domain/scorecard.dart';
 
 void main() {
+  test(
+    'scorecard shows descending scores while retaining editable indices',
+    () {
+      var card = Scorecard.create(shooter: 'Test', arrowsPerEnd: 6);
+      for (final entry in ['3', 'M', '10', '8', 'X'].asMap().entries) {
+        card = card.setArrow(0, entry.key, Score.parse(entry.value));
+      }
+      expect(card.sortedArrowIndices(0), [4, 2, 3, 0, 1, 5]);
+      final edited = card.setArrow(
+        0,
+        card.sortedArrowIndices(0)[0],
+        Score.parse('1'),
+      );
+      expect(edited.ends[0][4].finalScore!.label, '1');
+      expect(edited.ends[0][2].finalScore!.label, '10');
+      expect(edited.sortedArrowIndices(0), [2, 3, 0, 4, 1, 5]);
+    },
+  );
+
   test('X, miss, unset and cumulative totals stay distinct', () {
     var card = Scorecard.create(shooter: 'Bas', endCount: 2);
     card = card

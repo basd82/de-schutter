@@ -146,6 +146,12 @@ void main() {
             'Expected $expected; proposals: ${a.proposals.map((p) => (p.x * 2 - 1, p.y * 2 - 1)).toList()}',
       );
     }
+    final capped = LocalPhotoAnalyzer.analyzeBytes(
+      Uint8List.fromList(img.encodePng(image)),
+      target: 'WA 10-ringen',
+      expectedArrows: 2,
+    );
+    expect(capped.proposals.length, 2);
     expect(
       a.proposals.every((p) => p.needsReview && p.confidence == 0),
       isTrue,
