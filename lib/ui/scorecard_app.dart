@@ -151,7 +151,10 @@ class _ScorecardHomeState extends State<ScorecardHome> {
   Future<void> newCard() async {
     final card = await showDialog<Scorecard>(
       context: context,
-      builder: (_) => const NewCardDialog(),
+      builder: (_) => NewCardDialog(
+        initialShooter: controller.shooterDefaults.shooter,
+        initialClub: controller.shooterDefaults.club,
+      ),
     );
     if (card != null && await perform(() => controller.add(card)) && mounted) {
       setState(() => selectedId = card.id);
@@ -812,16 +815,28 @@ class _ScorecardHomeState extends State<ScorecardHome> {
 }
 
 class NewCardDialog extends StatefulWidget {
-  const NewCardDialog({super.key});
+  const NewCardDialog({
+    super.key,
+    this.initialShooter = '',
+    this.initialClub = '',
+  });
+  final String initialShooter, initialClub;
   @override
   State<NewCardDialog> createState() => _NewCardDialogState();
 }
 
 class _NewCardDialogState extends State<NewCardDialog> {
   final form = GlobalKey<FormState>();
-  final shooter = TextEditingController(),
-      club = TextEditingController(),
-      distance = TextEditingController(text: '18');
+  late final TextEditingController shooter, club;
+  final distance = TextEditingController(text: '18');
+
+  @override
+  void initState() {
+    super.initState();
+    shooter = TextEditingController(text: widget.initialShooter);
+    club = TextEditingController(text: widget.initialClub);
+  }
+
   int arrows = 3, ends = 12;
   double targetCm = 40;
   bool smallTen = false, countX = false;

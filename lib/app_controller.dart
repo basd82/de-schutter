@@ -8,6 +8,14 @@ class AppController extends ChangeNotifier {
   final ScorecardStore store;
   List<Scorecard> _cards = [];
   List<Scorecard> get cards => List.unmodifiable(_cards);
+
+  /// Scorecards already persist these details, including an intentionally empty club.
+  ({String shooter, String club}) get shooterDefaults {
+    if (_cards.isEmpty) return (shooter: '', club: '');
+    final newest = _cards.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+    return (shooter: newest.shooter, club: newest.club);
+  }
+
   bool busy = false;
   Future<void> load() async {
     _cards = await store.load();

@@ -9,6 +9,31 @@ import 'package:de_schutter/features/photo/photo_service.dart';
 import 'package:de_schutter/ui/scorecard_app.dart';
 
 void main() {
+  testWidgets(
+    'new card prefills remembered shooter and club and allows editing',
+    (tester) async {
+      final controller = AppController(_MemoryStore());
+      await controller.add(
+        Scorecard.create(shooter: 'Bas', club: 'Mijn vereniging'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NewCardDialog(
+              initialShooter: controller.shooterDefaults.shooter,
+              initialClub: controller.shooterDefaults.club,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Bas'), findsOneWidget);
+      expect(find.text('Mijn vereniging'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField).first, 'Andere naam');
+      expect(find.text('Andere naam'), findsOneWidget);
+      expect(controller.cards.single.shooter, 'Bas');
+    },
+  );
+
   testWidgets('desktop edits scores and views photos without camera action', (
     tester,
   ) async {
