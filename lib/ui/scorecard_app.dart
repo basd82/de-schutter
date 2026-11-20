@@ -248,8 +248,9 @@ class _ScorecardHomeState extends State<ScorecardHome> {
         }
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         message('Export met foto’s is niet gelukt. Probeer opnieuw.');
+      }
     } finally {
       // Keep a shared mobile file available while the receiving app reads it.
       if (temporary != null && !Platform.isIOS && !Platform.isAndroid) {
