@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "net.dikkenberg" "\0"
-            VALUE "FileDescription", "de_schutter" "\0"
+            VALUE "FileDescription", "De Schutter" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "de_schutter" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 net.dikkenberg. All rights reserved." "\0"
             VALUE "OriginalFilename", "de_schutter.exe" "\0"
-            VALUE "ProductName", "de_schutter" "\0"
+            VALUE "ProductName", "De Schutter" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

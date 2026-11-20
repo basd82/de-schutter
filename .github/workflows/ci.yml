@@ -49,7 +49,7 @@ jobs:
           - platform: ios
             os: macos-latest
             command: flutter build ios --simulator --debug
-            artifact: build/ios/iphonesimulator/Runner.app
+            artifact: build/ios/iphonesimulator/De Schutter.app
           - platform: macos
             os: macos-latest
             command: flutter build macos --debug
@@ -74,6 +74,26 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: ${{ matrix.command }}
+      - name: Verify Apple app name and version
+        if: matrix.platform == 'ios' || matrix.platform == 'macos'
+        env:
+          APP_BUNDLE: ${{ matrix.artifact }}
+          APP_PLATFORM: ${{ matrix.platform }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, plistlib, re
+          from pathlib import Path
+          bundle = Path(os.environ['APP_BUNDLE'])
+          assert bundle.name == 'De Schutter.app'
+          plist = bundle / ('Contents/Info.plist' if os.environ['APP_PLATFORM'] == 'macos' else 'Info.plist')
+          info = plistlib.loads(plist.read_bytes())
+          version, build = re.search(r'^version: ([^+]+)\+(\d+)$', Path('pubspec.yaml').read_text(), re.M).groups()
+          assert info['CFBundleName'] == 'De Schutter', info
+          assert info['CFBundleDisplayName'] == 'De Schutter', info
+          assert info['CFBundleShortVersionString'] == version, info
+          assert info['CFBundleVersion'] == build, info
+          print(f'Verified De Schutter {version} ({build})')
+          PYTHON
       - uses: actions/upload-artifact@v4
         with:
           name: de-schutter-${{ matrix.platform }}-debug
