@@ -168,7 +168,9 @@ class Scorecard {
         distance > 1000 ||
         ![3, 6].contains(arrowsPerEnd) ||
         ![20.0, 40.0, 60.0, 80.0, 122.0].contains(targetCm) ||
-        !shaftMm.isFinite || shaftMm < 0 || shaftMm > 20 ||
+        !shaftMm.isFinite ||
+        shaftMm < 0 ||
+        shaftMm > 20 ||
         (smallTen && countX) ||
         ends.isEmpty ||
         ends.length > 60 ||
@@ -222,6 +224,23 @@ class Scorecard {
   int get hits => arrows.where((a) => (a.finalScore?.points ?? 0) > 0).length;
   int get tens => arrows.where((a) => a.finalScore?.points == 10).length;
   int get xs => arrows.where((a) => a.finalScore?.label == 'X').length;
+
+  /// Display order only: preserve original arrow indices and their edit history.
+  List<int> sortedArrowIndices(int end) {
+    final indices = List.generate(arrowsPerEnd, (i) => i);
+    indices.sort((a, b) {
+      final left = ends[end][a].finalScore;
+      final right = ends[end][b].finalScore;
+      if (left == null) return right == null ? a.compareTo(b) : 1;
+      if (right == null) return -1;
+      final rank = Score.labels
+          .indexOf(left.label)
+          .compareTo(Score.labels.indexOf(right.label));
+      return rank == 0 ? a.compareTo(b) : rank;
+    });
+    return indices;
+  }
+
   int endTotal(int index) =>
       ends[index].fold(0, (s, a) => s + (a.finalScore?.points ?? 0));
   int cumulative(int index) =>
@@ -322,7 +341,9 @@ class Scorecard {
       arrowsPerEnd: j['arrowsPerEnd'] as int,
       targetCm: (j['targetCm'] as num?)?.toDouble() ?? 40,
       shaftMm: (j['shaftMm'] as num?)?.toDouble() ?? 0,
-      smallTen: j['smallTen'] as bool? ?? (j['bow'] == 'Compound' && (j['distance'] as int) <= 25),
+      smallTen:
+          j['smallTen'] as bool? ??
+          (j['bow'] == 'Compound' && (j['distance'] as int) <= 25),
       countX: j['countX'] as bool? ?? ((j['distance'] as int) > 25),
       ends: (j['ends'] as List)
           .map(

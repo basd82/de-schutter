@@ -39,7 +39,7 @@ class _Hit {
   }) : proposed = score;
   Offset point;
   Score score, proposed;
-  bool corrected, overridden, checked = false;
+  bool corrected, overridden;
   bool missing;
 }
 
@@ -77,7 +77,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
           0,
           0,
         ]);
-    for (final p in a.proposals) {
+    for (final p in a.proposals.take(widget.card.arrowsPerEnd)) {
       hits.add(_Hit(Offset(p.x * 2 - 1, p.y * 2 - 1), p.score));
     }
     final old = widget.previous;
@@ -92,7 +92,10 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
             _Hit(
               h['missing'] == true
                   ? Offset.zero
-                  : Offset((h['x'] as num).toDouble(), (h['y'] as num).toDouble()),
+                  : Offset(
+                      (h['x'] as num).toDouble(),
+                      (h['y'] as num).toDouble(),
+                    ),
               Score.parse(h['score'] as String),
               corrected: h['corrected'] as bool,
               overridden: h['overridden'] as bool? ?? h['corrected'] as bool,
@@ -106,6 +109,9 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
       } catch (_) {
         error = 'Eerdere correcties konden niet worden geladen.';
       }
+    }
+    if (hits.length > widget.card.arrowsPerEnd) {
+      hits.removeRange(widget.card.arrowsPerEnd, hits.length);
     }
     // A missing detection is only a provisional miss, not a confirmed M.
     // Create one reviewable entry per expected arrow, even outside the photo.
@@ -129,7 +135,6 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
         h.score = scoring.score(h.point.dx, h.point.dy);
         h.proposed = h.score;
       }
-      h.checked = false;
     }
   }
 
@@ -161,7 +166,10 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
   }
 
   void changeZoom(double factor) {
-    final scale = (zoomController.value.getMaxScaleOnAxis() * factor).clamp(1.0, 5.0);
+    final scale = (zoomController.value.getMaxScaleOnAxis() * factor).clamp(
+      1.0,
+      5.0,
+    );
     zoomController.value = Matrix4.diagonal3Values(scale, scale, 1);
     setState(() {});
   }
@@ -169,10 +177,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
   @override
   Widget build(BuildContext context) {
     final a = widget.analysis;
-    final canSave =
-        !calibration &&
-        hits.length == widget.card.arrowsPerEnd &&
-        hits.every((h) => h.checked);
+    final canSave = !calibration && hits.length == widget.card.arrowsPerEnd;
     return AlertDialog(
       title: Text('Pijlen controleren · serie ${widget.end + 1}'),
       content: SizedBox(
@@ -199,7 +204,8 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                       icon: const Icon(Icons.zoom_in),
                     ),
                     TextButton(
-                      onPressed: () => zoomController.value = Matrix4.identity(),
+                      onPressed: () =>
+                          zoomController.value = Matrix4.identity(),
                       child: const Text('100%'),
                     ),
                   ],
@@ -220,10 +226,13 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                           onTapUp: calibration
                               ? null
                               : (details) => setState(() {
-                                  final missingIndex = hits.indexWhere((h) => h.missing);
+                                  final missingIndex = hits.indexWhere(
+                                    (h) => h.missing,
+                                  );
                                   if (missingIndex < 0 &&
                                       hits.length >= widget.card.arrowsPerEnd) {
-                                    error = 'Verwijder eerst een fout gevonden pijl.';
+                                    error =
+                                        'Verwijder eerst een fout gevonden pijl.';
                                     return;
                                   }
                                   final p = geometry.targetPoint(
@@ -276,37 +285,37 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                               if (!calibration)
                                 for (var i = 0; i < hits.length; i++)
                                   if (!hits[i].missing)
-                                  _marker(
-                                    _offset(
-                                          geometry.imagePoint(
-                                            hits[i].point.dx,
-                                            hits[i].point.dy,
-                                          ),
-                                        ) *
-                                        scale,
-                                    '${i + 1}',
-                                    i == selected
-                                        ? Colors.orange
-                                        : Colors.purple,
-                                    (delta) {
-                                      final current = geometry.imagePoint(
-                                        hits[i].point.dx,
-                                        hits[i].point.dy,
-                                      );
-                                      final p = geometry.targetPoint(
-                                        current.x + delta.dx / scale,
-                                        current.y + delta.dy / scale,
-                                      );
-                                      hits[i].point = _offset(p);
-                                      hits[i].corrected = true;
-                                      hits[i].overridden = false;
-                                      hits[i].score = scoring.score(p.x, p.y);
-                                      hits[i].proposed = hits[i].score;
-                                      hits[i].checked = false;
-                                      selected = i;
-                                    },
-                                    onTap: () => selected = i,
-                                  ),
+                                    _marker(
+                                      _offset(
+                                            geometry.imagePoint(
+                                              hits[i].point.dx,
+                                              hits[i].point.dy,
+                                            ),
+                                          ) *
+                                          scale,
+                                      '${i + 1}',
+                                      i == selected
+                                          ? Colors.orange
+                                          : Colors.purple,
+                                      (delta) {
+                                        final current = geometry.imagePoint(
+                                          hits[i].point.dx,
+                                          hits[i].point.dy,
+                                        );
+                                        final p = geometry.targetPoint(
+                                          current.x + delta.dx / scale,
+                                          current.y + delta.dy / scale,
+                                        );
+                                        hits[i].point = _offset(p);
+                                        hits[i].corrected = true;
+                                        hits[i].overridden = false;
+                                        hits[i].score = scoring.score(p.x, p.y);
+                                        hits[i].proposed = hits[i].score;
+
+                                        selected = i;
+                                      },
+                                      onTap: () => selected = i,
+                                    ),
                             ],
                           ),
                         ),
@@ -333,7 +342,9 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                       : 'Blazoen verkeerd herkend? Ringen aanpassen',
                 ),
               ),
-              Text('Kaartinstellingen: blazoen ${targetCm.toInt()} cm · pijldiameter $shaftMm mm · ${smallTen ? 'compound binnenste 10' : (countX ? 'binnenring X' : 'normale 10')}'),
+              Text(
+                'Kaartinstellingen: blazoen ${targetCm.toInt()} cm · pijldiameter $shaftMm mm · ${smallTen ? 'compound binnenste 10' : (countX ? 'binnenring X' : 'normale 10')}',
+              ),
               for (var i = 0; i < hits.length; i++)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -392,9 +403,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                                 hits[i] = swap;
                                 selected = to;
                               }
-                              for (final h in hits) {
-                                h.checked = false;
-                              }
+                              for (final h in hits) {}
                             }),
                           ),
                         ],
@@ -408,25 +417,18 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                               selected: hits[i].score.label == label,
                               onSelected: (_) => setState(() {
                                 if (hits[i].missing && label != 'M') {
-                                  error = 'Wijs eerst het inslagpunt aan op de foto.';
+                                  error =
+                                      'Wijs eerst het inslagpunt aan op de foto.';
                                   return;
                                 }
                                 hits[i].score = Score.parse(label);
                                 hits[i].overridden = true;
                                 hits[i].corrected = true;
-                                hits[i].checked = false;
+
                                 selected = i;
                               }),
                             ),
                         ],
-                      ),
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(hits[i].missing
-                            ? 'Misser gecontroleerd (geen inslagpunt nodig)'
-                            : 'Inslagpunt en score gecontroleerd'),
-                        value: hits[i].checked,
-                        onChanged: (v) => setState(() => hits[i].checked = v!),
                       ),
                     ],
                   ),
@@ -438,7 +440,7 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                 ),
               Text(
                 '${hits.length}/${widget.card.arrowsPerEnd} pijlen. '
-                'Niet-herkende pijlen staan voorlopig op M. Bevestig iedere misser.'
+                'Niet-herkende pijlen staan op M. Controleer alle pijlen en missers; bevestig daarna één keer.',
               ),
             ],
           ),
@@ -473,7 +475,11 @@ class _PhotoReviewDialogState extends State<PhotoReviewDialog> {
                             'x': h.missing ? null : h.point.dx,
                             'y': h.missing ? null : h.point.dy,
                             'missing': h.missing,
-                            'reason': h.missing ? 'confirmed_miss' : (h.corrected ? 'manually_corrected' : 'detected'),
+                            'reason': h.missing
+                                ? 'confirmed_miss'
+                                : (h.corrected
+                                      ? 'manually_corrected'
+                                      : 'detected'),
                             'score': h.score.label,
                             'corrected': h.corrected,
                             'overridden': h.overridden,

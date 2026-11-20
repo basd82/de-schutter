@@ -653,7 +653,7 @@ class _ScorecardHomeState extends State<ScorecardHome> {
                                 DataRow(
                                   cells: [
                                     DataCell(Text('${e + 1}')),
-                                    for (var a = 0; a < card.arrowsPerEnd; a++)
+                                    for (final a in card.sortedArrowIndices(e))
                                       DataCell(
                                         SizedBox(
                                           width: 48,
@@ -841,14 +841,22 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 decoration: const InputDecoration(labelText: 'Blazoendiameter'),
                 items: [
                   for (final cm in [20.0, 40.0, 60.0, 80.0, 122.0])
-                    DropdownMenuItem(value: cm, child: Text('${cm.toInt()} cm')),
+                    DropdownMenuItem(
+                      value: cm,
+                      child: Text('${cm.toInt()} cm'),
+                    ),
                 ],
                 onChanged: (v) => targetCm = v!,
               ),
               TextFormField(
                 controller: shaftController,
-                decoration: const InputDecoration(labelText: 'Pijldiameter (mm)', helperText: '0 = onbekend'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Pijldiameter (mm)',
+                  helperText: '0 = onbekend',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 validator: (v) {
                   final mm = double.tryParse((v ?? '').replaceAll(',', '.'));
                   return mm == null || !mm.isFinite || mm < 0 || mm > 20
@@ -913,9 +921,15 @@ class _NewCardDialogState extends State<NewCardDialog> {
                 arrowsPerEnd: arrows,
                 endCount: ends,
                 targetCm: targetCm,
-                shaftMm: double.parse(shaftController.text.replaceAll(',', '.')),
-                smallTen: smallTen || target == 'WA indoor compound (binnenste 10)',
-                countX: !smallTen && target != 'WA indoor compound (binnenste 10)' && countX,
+                shaftMm: double.parse(
+                  shaftController.text.replaceAll(',', '.'),
+                ),
+                smallTen:
+                    smallTen || target == 'WA indoor compound (binnenste 10)',
+                countX:
+                    !smallTen &&
+                    target != 'WA indoor compound (binnenste 10)' &&
+                    countX,
               ),
             );
           }
