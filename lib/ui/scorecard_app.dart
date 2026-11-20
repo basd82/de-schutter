@@ -1,4 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart' as file_selector;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../app_controller.dart';
 import '../domain/scorecard.dart';
+import '../features/export/photo_export.dart';
 import '../features/photo/local_photo_analyzer.dart';
 import 'photo_review_dialog.dart';
 import '../features/photo/photo_service.dart';
@@ -204,6 +210,55 @@ class _ScorecardHomeState extends State<ScorecardHome> {
     }
   }
 
+  bool exportingPhotos = false;
+
+  Future<void> exportWithPhotos(Scorecard card, Rect origin) async {
+    if (exportingPhotos) return;
+    setState(() => exportingPhotos = true);
+    Directory? temporary;
+    try {
+      final file = await PhotoExport.create(
+        card,
+        widget.photos,
+        await getTemporaryDirectory(),
+      );
+      temporary = file.parent;
+      if (!mounted) return;
+      if (Platform.isIOS || Platform.isAndroid) {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: 'application/zip')],
+            subject: 'De Schutter — scorekaart met foto’s',
+            sharePositionOrigin: origin,
+          ),
+        );
+      } else {
+        final location = await file_selector.getSaveLocation(
+          suggestedName: 'de-schutter-met-fotos.zip',
+          acceptedTypeGroups: [
+            const file_selector.XTypeGroup(
+              label: 'ZIP met foto’s',
+              extensions: ['zip'],
+            ),
+          ],
+        );
+        if (location != null) {
+          await file.copy(location.path);
+          if (mounted) message('Scorekaart met foto’s opgeslagen.');
+        }
+      }
+    } catch (_) {
+      if (mounted)
+        message('Export met foto’s is niet gelukt. Probeer opnieuw.');
+    } finally {
+      // Keep a shared mobile file available while the receiving app reads it.
+      if (temporary != null && !Platform.isIOS && !Platform.isAndroid) {
+        await temporary.delete(recursive: true);
+      }
+      if (mounted) setState(() => exportingPhotos = false);
+    }
+  }
+
   Future<void> exportCard(Scorecard card) async {
     await showDialog<void>(
       context: context,
@@ -216,6 +271,18 @@ class _ScorecardHomeState extends State<ScorecardHome> {
           ),
         ),
         actions: [
+          Builder(
+            builder: (buttonContext) => TextButton.icon(
+              icon: const Icon(Icons.folder_zip_outlined),
+              label: const Text('Exporteren met foto’s (ZIP)'),
+              onPressed: () {
+                final box = buttonContext.findRenderObject()! as RenderBox;
+                final origin = box.localToGlobal(Offset.zero) & box.size;
+                Navigator.pop(context);
+                exportWithPhotos(card, origin);
+              },
+            ),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Sluiten'),

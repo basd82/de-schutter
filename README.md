@@ -105,3 +105,12 @@ De originele voorbeeldfoto's worden niet als publieke repository-assets of als r
 Geometrie, gecorrigeerde punten, instellingen en voorstellen blijven bij de foto bewaard. De scorekaart bewaart voorstellen, definitieve scores en wijzigingshistorie. Een heropende foto vereist opnieuw controle. Herkenning is geen gevalideerde automatische jurering: vooral kruisende schachten en veren vragen correctie. Meervoudige/Field-blazoenen worden nog niet ondersteund. JPEG/PNG werken; niet decodeerbare bestanden houden hun oorspronkelijke foto en krijgen handmatige score-invoer.
 
 Voor lokale evaluatie met eigen foto’s: `dart run tool/evaluate_photos.dart /pad/naar/fotos /tmp/evaluatie`. Dit hulpmiddel schrijft alleen lokale overlays, zonder foto’s te uploaden.
+
+### Scorekaart met foto's delen
+
+Kies bij **Exporteren** voor **Exporteren met foto’s (ZIP)**. Op iPhone/iPad en
+Android opent het deelmenu (bijvoorbeeld om het bestand te bewaren of te delen).
+Op macOS en Windows kies je een opslaglocatie. Het pakket bevat `scorekaart.json`,
+de originele foto's per serie en de bewaarde detecties/handmatige correcties.
+Je kunt dit ZIP-bestand meesturen bij een probleem met fotoherkenning.
+De bestaande JSON-import zet alleen de scorekaart terug, niet de foto's uit een ZIP.
